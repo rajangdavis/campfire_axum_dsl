@@ -1,0 +1,7 @@
+<nav class="room-nav">
+  <a href="/users/me/sidebar">Rooms</a>
+  <form method="get" action="/searches"><input type="search" name="q" value="{{ terms }}" placeholder="Search"></form>
+</nav>
+<section id="search_results" class="messages">
+{{ partial :message_list, messages: messages }}
+</section>

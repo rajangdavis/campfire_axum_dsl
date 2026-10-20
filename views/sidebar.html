@@ -1,0 +1,12 @@
+<div class="sidebar__container">
+  <div id="direct_rooms" class="directs">
+{% for room in directs %}
+    <a class="direct" href="/rooms/{{ room.id }}">{{ room.name }}</a>
+{% endfor %}
+  </div>
+  <div id="shared_rooms" class="rooms">
+{% for room in shared %}
+    <a class="room" href="/rooms/{{ room.id }}">{{ room.name }}</a>
+{% endfor %}
+  </div>
+</div>

@@ -1,0 +1,4 @@
+{% args messages: %}
+{% for message in messages %}
+{{ partial :message, message_id: message.id, creator_name: message.creator_name, created_at: message.created_at, body: message.body }}
+{% endfor %}
