@@ -1,0 +1,79 @@
+# Runs once-campfire-verification's bin/benchmark against this app (`--apps axum-dsl`) on a hosted Linux runner:
+# the route contracts and the post_message write audit, which the macOS preflight cannot reach. Hosted runners
+# are shared VMs, so the requests/sec are a smoke test, not a number to publish next to the reference results.
+#
+# The jobs lay the repositories out as the harness expects (bench/compare.rb: the workspace is the verification
+# repo's parent): once-campfire-verification/, axum_dsl/ (the compiler, ../axum_dsl from here), this repo as
+# campfire_axum_dsl/, and once-campfire-axum-dsl -> campfire_axum_dsl, the source path compare.rb reads for the
+# app's git revision. The verification repo is a fork until its compare.rb `axum-dsl` entry is upstream.
+name: Benchmark
+on:
+  workflow_dispatch:
+    inputs:
+      verification_repo:
+        description: once-campfire-verification fork that knows `--apps axum-dsl`
+        default: rajangdavis/once-campfire-verification
+      verification_ref:
+        description: branch, tag or commit of that fork
+        default: main
+      axum_dsl_ref:
+        description: branch, tag or commit of rajangdavis/axum_dsl
+        default: main
+      preflight:
+        description: contracts only (no timed samples, no write audit)
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: campfire_axum_dsl
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: rajangdavis/axum_dsl
+          ref: ${{ inputs.axum_dsl_ref }}
+          path: axum_dsl
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ inputs.verification_repo }}
+          ref: ${{ inputs.verification_ref }}
+          path: once-campfire-verification
+          persist-credentials: false
+      - name: Link the app source where compare.rb looks for it
+        run: ln -s campfire_axum_dsl once-campfire-axum-dsl
+      # The same prerequisites as the verification repo's own CI (.github/workflows/ci.yml), plus taskset.
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y ruby sqlite3 ffmpeg util-linux
+          rustup toolchain install 1.98.1 --profile minimal
+          rustup override set 1.98.1 --path once-campfire-verification
+      - name: Build the reference seed (pinned Rails revision, real attachments)
+        working-directory: once-campfire-verification
+        run: bin/seed
+      - name: Build the app image (once-campfire-axum-dsl:app)
+        run: make -C campfire_axum_dsl image
+      - name: Build the load generator
+        working-directory: once-campfire-verification
+        run: cargo build --release --locked --manifest-path loadgen/Cargo.toml
+      # A hosted runner has 4 vCPUs: two for the server, two for the load generator.
+      - name: Run the benchmark
+        working-directory: once-campfire-verification
+        run: |
+          bin/benchmark --apps axum-dsl --rounds 2 --cpus 0-1 --client-cpus 2-3 \
+            ${{ inputs.preflight && '--preflight' || '' }}
+      - name: Keep the results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            once-campfire-verification/tmp/bench/results/
+          if-no-files-found: warn
