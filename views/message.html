@@ -1,5 +1,5 @@
 {% args message_id:, creator_name:, created_at:, body: %}
-<article class="message" id="message_{{ message_id }}" data-message-id="{{ message_id }}">
+<div class="message" id="message_{{ message_id }}" data-message-id="{{ message_id }}">
   <h3 class="message__heading"><strong class="message__author">{{ creator_name }}</strong> <time class="message__timestamp">{{ created_at }}</time></h3>
-  <div class="message__body">{{ body|sanitize }}</div>
-</article>
+  <turbo-frame id="edit_message_{{ message_id }}"><div class="message__body" id="presentation_message_{{ message_id }}">{{ body|sanitize }}</div></turbo-frame>
+</div>
