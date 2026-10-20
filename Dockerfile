@@ -28,14 +28,14 @@ RUN cargo build --release
 
 # 3. Runtime: the binary, run from the crate directory, because /assets is served from its public/.
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/* \
-    && useradd --uid 1000 --create-home campfire
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=emit /crate/public public
 COPY --from=build /target/release/campfire /app/campfire
 ENV BIND=0.0.0.0 \
     DATABASE_PATH=/rails/storage/db/production.sqlite3 \
     ACTIVE_STORAGE_PATH=/rails/storage/files
-USER 1000:1000
+# No USER: the server runs as root. The harness bind-mounts a db/ owned by whoever ran it (uid 1001 on a GitHub
+# runner) and only chmods it after /up answers, but startup already writes the database (WAL, migrations table).
 # PORT is what the generated main() reads, falling back to `set :port` (8099); the harness names it HTTP_PORT.
 CMD ["sh", "-c", "if [ -n \"${HTTP_PORT:-}\" ] && [ -z \"${PORT:-}\" ]; then export PORT=\"$HTTP_PORT\"; fi; exec /app/campfire"]
