@@ -63,7 +63,7 @@ as the `axum_dsl` build context), which once-campfire-verification runs with `bi
 The [Benchmark workflow](.github/workflows/benchmark.yml) does the same on a GitHub-hosted runner: run it from
 the Actions tab, with `preflight` ticked for the contracts only. Hosted runners are shared VMs, so its
 requests/sec are a smoke test, not numbers to compare with the reference results. For those,
-[aws-benchmark.sh](aws-benchmark.sh) sets up a dedicated 16-core Linux host (written for an AWS c7a.4xlarge)
+[bench-linux.sh](bench-linux.sh) sets up a dedicated Linux host or VM (its header has the Google Cloud commands)
 and runs Rails, Rust and this app with the report's settings.
 
 The image runs as root: the harness mounts a database folder owned by whoever ran it, and the server writes

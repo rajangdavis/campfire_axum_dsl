@@ -4,14 +4,22 @@
 # "Reproduce"): 3 rounds, 8-second samples, 16 clients, four server cores and four load-generator cores, the
 # normal route set and then the mixed profile. The GitHub workflow is a smoke test; this is the real run.
 #
-# Written for a fresh AWS c7a.4xlarge (16 vCPU, each a full core, 32 GiB) on Ubuntu 24.04, 60 GB disk:
+# Any Linux host or VM with Ubuntu 24.04, about 10 full cores free, 32 GB of RAM and 60 GB of disk. CPUS and
+# CLIENT_CPUS name the cores for the app and for the load generator; keep them on different physical cores, so
+# turn simultaneous multithreading off where the host allows it. On Google Cloud (15 full AMD Zen 4 cores):
 #
-#   curl -fsSLO https://raw.githubusercontent.com/rajangdavis/campfire_axum_dsl/main/aws-benchmark.sh
-#   sh aws-benchmark.sh
+#   gcloud compute instances create campfire-bench --zone=us-central1-a \
+#     --machine-type=c3d-standard-30 --threads-per-core=1 \
+#     --image-family=ubuntu-2404-lts-amd64 --image-project=ubuntu-os-cloud \
+#     --boot-disk-size=60GB --boot-disk-type=pd-balanced
+#   gcloud compute ssh campfire-bench --zone=us-central1-a
+#   curl -fsSLO https://raw.githubusercontent.com/rajangdavis/campfire_axum_dsl/main/bench-linux.sh
+#   CPUS=6-9 CLIENT_CPUS=10-13 sh bench-linux.sh      # inside tmux, so a dropped ssh does not end it
+#   gcloud compute scp campfire-bench:bench/results.tar.gz . --zone=us-central1-a
+#   gcloud compute instances delete campfire-bench --zone=us-central1-a
 #
 # It is safe to rerun: clones, the seed and images that exist are kept. Results land in
-# $WORK/once-campfire-verification/tmp/bench/results/ and are packed into $WORK/results.tar.gz; copy that back
-# (scp) and terminate the instance.
+# $WORK/once-campfire-verification/tmp/bench/results/ and are packed into $WORK/results.tar.gz.
 set -eu
 
 WORK=${WORK:-$HOME/bench}
@@ -22,7 +30,8 @@ CLIENT_CPUS=${CLIENT_CPUS:-12-15}
 RAILS_REV=90b330024dec3e757c79b6a7e6568f93da8e3148
 RUST_TOOLCHAIN=1.98.1
 
-[ "$(nproc)" -ge 16 ] || { echo "aws-benchmark: needs 16 CPUs for --cpus $CPUS --client-cpus $CLIENT_CPUS, found $(nproc)" >&2; exit 1; }
+highest=$(echo "$CPUS,$CLIENT_CPUS" | tr ',-' '\n\n' | sort -n | tail -1)
+[ "$highest" -lt "$(nproc)" ] || { echo "bench-linux: --cpus $CPUS --client-cpus $CLIENT_CPUS needs CPU $highest, but this host has $(nproc) (0-$(($(nproc) - 1))); set CPUS and CLIENT_CPUS" >&2; exit 1; }
 
 # 1. Prerequisites: the verification repo's own CI list, plus Docker with BuildKit (the Dockerfile uses
 #    --build-context) and the headers the load generator builds against.
@@ -73,4 +82,4 @@ bin/benchmark --apps "$APPS" --rounds 3 --duration 8 --concurrencies 16 \
 	--routes room_show,messages_page,sidebar,search
 
 tar -czf "$WORK/results.tar.gz" -C tmp/bench results
-echo "aws-benchmark: done; copy $WORK/results.tar.gz back, then terminate the instance"
+echo "bench-linux: done; copy $WORK/results.tar.gz back, then terminate the instance"
