@@ -5,7 +5,7 @@
 #   e2e-campfire    build, then drive the service over HTTP (needs curl and sqlite3)
 #   image           the production image once-campfire-verification's bin/benchmark runs (needs docker)
 
-.PHONY: check-fast dsl-check build e2e-campfire image
+.PHONY: check-fast dsl-check build e2e-campfire image bench-local
 
 # The dsl-check hook runs `make check-fast`.
 check-fast: dsl-check
@@ -34,3 +34,13 @@ e2e-campfire: build
 IMAGE ?= once-campfire-axum-dsl:app
 image:
 	docker build --build-context axum_dsl=../axum_dsl -t $(IMAGE) .
+
+# WAVE-PLAN AP0: the release build on the verification repo's real seed, driven by its load generator with its
+# route contracts (test/bench_local.rb). LABEL names the run; compare runs made on the same host only. The load
+# generator builds in its own target dir and without -Dwarnings, as the verification repo builds it.
+BENCH_OUT = /tmp/campfire_axum_dsl-bench
+LABEL ?= run
+bench-local:
+	$(AXUM_DSL) build campfire.axum.rb -o $(BENCH_OUT) --release
+	env -u CARGO_TARGET_DIR RUSTFLAGS= cargo build --release --locked --manifest-path ../once-campfire-verification/loadgen/Cargo.toml
+	ruby test/bench_local.rb $(BENCH_OUT) $(CARGO_TARGET_DIR)/release/campfire --label $(LABEL)

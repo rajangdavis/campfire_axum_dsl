@@ -21,10 +21,12 @@ fragment do
 
   # Opening a room clears the membership's unread marker. The reference clears it when the room's presence
   # channel subscribes (Membership::Connectable#present, through PresenceChannel); this port has no presence
-  # channel, so a room read stands in.
+  # channel, so a room read stands in. Membership#read is `update!(unread_at: nil)`, which writes nothing when
+  # the marker is already clear; `unread_at IS NOT NULL` makes this UPDATE change nothing then too (it used to
+  # rewrite the row and bump updated_at on every room visit).
   execute :clear_unread, args: { user_id: :i64, room_id: :i64 }, sql: <<~SQL
     UPDATE memberships SET unread_at = NULL, updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now')
-    WHERE user_id = :user_id AND room_id = :room_id
+    WHERE user_id = :user_id AND room_id = :room_id AND unread_at IS NOT NULL
   SQL
 
   # --- sidebar (users/sidebars_controller.rb): visible memberships, directs apart from the shared rooms --------------

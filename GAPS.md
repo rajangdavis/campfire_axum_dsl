@@ -137,6 +137,21 @@ the big one for the compiler.
   A user with no avatar or no processed `:square` variant still answers 404 here; Rails' initials SVG and bot
   default remain out (section 14).
 
+## 16. A side effect under a condition
+- Needs: Rails' `Membership#read` (`update!(unread_at: nil)`) writes nothing when the marker is already clear,
+  so a room visit is a write only the first time. The natural port is
+  `clear_unread(...) unless unread_marker(...).nil?`, or the same as an `unless ... end` block.
+- Lacks: every statement-level `if`/`unless` is compiled as a guard clause (`axum_dsl/lib/axum_dsl/body.rb:269`),
+  which must end in `return` or `raise` ("a guard clause must end with `return` or `raise`"), so a
+  conditional call that does not leave the route cannot be written.
+- Worked around 2026-10-21 in SQL: `clear_unread`'s UPDATE gained `AND unread_at IS NOT NULL`, so it changes no
+  row once the marker is clear (`models/room.axum.rb`). That alone took room_show from 296 to 4,113 rps and its
+  p99 from 1,038 to 8 ms on `make bench-local` (raj-dev; WAVE-PLAN AP0), because every visit had been rewriting
+  the row under SQLite's single write lock. The statement still opens a write transaction, so a read-first
+  conditional would avoid even that once the compiler allows it.
+- Smallest feature: a statement-level `if`/`unless` (no `else` needed) whose body is calls and assignments to
+  existing locals, compiled to a Rust `if` block; guards keep their current form.
+
 ## Constructs least certain to compile (C1 could not build; C2 built the project, and `dsl-check`/`e2e_campfire.sh` now exercise the ones the service uses)
 `no_messages()` with `args: {}`; a ternary choosing between two `list(:MessageRow)` values; `(params[:q] || "").gsub(...)`;
 `return render(:session_new, status: 401, ...) if user.nil? || !Bcrypt.verify(...)` with a long guard; a partial with
