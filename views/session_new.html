@@ -1,7 +1,36 @@
-<section class="sign-in">
-  <form method="post" action="/session">
-    <label>Email <input type="email" name="email_address" required autofocus autocomplete="username" placeholder="Enter your email address"></label>
-    <label>Password <input type="password" name="password" required autocomplete="current-password" maxlength="72" placeholder="Enter your password"></label>
-    <button type="submit" name="log_in">Go</button>
-  </form>
+{% content_for :head %}<meta name="turbo-visit-control" content="reload">{% endcontent_for %}
+
+<section class="txt-align-center">
+  <div class="{{ panel_class }}">
+    <figure class="account-logo avatar center margin-block-end txt-xx-large"><img src="/account/logo?v={{ logo_version }}" alt="Account logo" width="300" height="300"></figure>
+
+    <form class="flex flex-column gap" action="{{ session_url }}" accept-charset="UTF-8" method="post">
+      <fieldset class="flex flex-column gap center-block upad">
+        <legend class="txt-large txt-align-center"><strong>{{ account_name }}</strong></legend>
+
+        <div class="flex align-center gap">
+          {{ partial :translation_button, en: "Enter your email address", es: "Introduce tu correo electrónico", fr: "Entrez votre adresse courriel", hi: "अपना ईमेल पता दर्ज करें", de: "Geben Sie Ihre E-Mail-Adresse ein", pt: "Insira seu endereço de email", ja: "メールアドレスを入力してください" }}
+          <label class="flex align-center gap input input--actor txt-large">
+            <input required="required" class="input" autofocus="autofocus" autocomplete="username" placeholder="Enter your email address" {% if email_filled %}value="{{ email_value }}" {% endif %}type="email" name="email_address" id="email_address">
+            <img aria-hidden="true" width="24" height="24" class="colorize--black" src="{{ asset_path "email.svg" }}">
+          </label>
+        </div>
+
+        <div class="flex align-center gap">
+          {{ partial :translation_button, en: "Enter your password", es: "Introduce tu contraseña", fr: "Saisissez votre mot de passe", hi: "अपना पासवर्ड दर्ज करें", de: "Geben Sie Ihr Passwort ein", pt: "Insira sua senha", ja: "パスワードを入力してください" }}
+          <label class="flex align-center gap input input--actor txt-large">
+            <input required="required" class="input" autocomplete="current-password" placeholder="Enter your password" maxlength="72" size="72" type="password" name="password" id="password">
+            <img aria-hidden="true" width="24" height="24" class="colorize--black" src="{{ asset_path "password.svg" }}">
+          </label>
+        </div>
+
+        <button class="btn btn--reversed center txt-large" type="submit" name="log_in">
+          <img aria-hidden="true" src="{{ asset_path "arrow-right.svg" }}">
+          <span class="for-screen-reader">Go</span>
+        </button>
+      </fieldset>
+    </form>
+  </div>
+
+  {{ partial :help_contact, admin_name: admin_name, admin_email: admin_email, has_admin: has_admin, version: version }}
 </section>

@@ -1,0 +1,91 @@
+{% content_for :body_class %}{{ body_class }}{% endcontent_for %}
+{% content_for :nav %}
+  <div class="flex-item-justify-start">
+    <a class="btn" href="{{ back_url }}">
+      <img aria-hidden="true" height="20" src="{{ asset_path "arrow-left.svg" }}" width="20">
+      <span class="for-screen-reader">Go Back</span>
+    </a>
+  </div>
+
+  <div class="flex align-center gap flex-item-justify-end">
+    {% if is_current %}
+      <a class="btn" href="/users/me/profile">
+        <img aria-hidden="true" src="{{ asset_path "pencil.svg" }}">
+        <span class="for-screen-reader">Edit my profile</span>
+      </a>
+    {% endif %}
+  </div>
+{% endcontent_for %}
+<section class="panel txt-align-center">
+  <div class="flex flex-column gap {% if is_banned %}banned{% endif %}">
+    <div class="avatar txt-xx-large center" style="background: white">
+      <img alt="Profile avatar" class="avatar" src="/users/{{ rails_signed_id target_id, purpose: "user/avatar", secret: :secret_key }}/avatar?v={{ version }}">
+    </div>
+
+    {% if is_bot %}
+      <div class="pad-double--inline push--inline push--block-start">
+        {% if is_active %}
+          <form action="/rooms/directs?user_ids%5B%5D={{ target_id }}" class="button_to" method="post">
+            <button class="btn btn--primary full-width txt--large" type="submit">
+              <img src="{{ asset_path "messages.svg" }}">
+            </button>
+          </form>
+        {% else %}
+          <div>{{ name }} is no longer on this account</div>
+        {% endif %}
+      </div>
+    {% else %}
+      {% if is_deactivated %}
+        <div>
+          <h1 class="txt-x-large margin-none">{{ name }}</h1>
+          <div>{{ name }} is no longer on this account</div>
+        </div>
+      {% else %}
+        <div class="flex flex-column gap" style="--row-gap: calc(var(--block-space) / 3)">
+          <h1 class="txt-x-large txt-tight-lines margin-none">{{ name }}</h1>
+          {% if can_administer %}
+            <div><a href="mailto:{{ email }}">{{ email }}</a></div>
+          {% endif %}
+          <div>{{ bio }}</div>
+        </div>
+
+        {% if is_active %}
+          <div class="pad-inline-double margin-inline margin-block-start">
+            <form action="/rooms/directs?user_ids%5B%5D={{ target_id }}" class="button_to" method="post">
+              <button class="btn btn--reversed full-width txt-large" type="submit">
+                <img aria-hidden="true" aria-label="Ping {{ name }}" src="{{ asset_path "messages.svg" }}">
+              </button>
+            </form>
+          </div>
+        {% endif %}
+
+        {% if show_transfer %}
+          <hr class="margin-block-start borderless">
+
+          {{ partial :user_transfer, is_current: is_current, transfer_url: transfer_url, qr_id: qr_id }}
+        {% endif %}
+
+        {% if show_ban %}
+          <div class="margin-block-start">
+            {% if is_active %}
+              <form action="/users/{{ target_id }}/ban" class="button_to" method="post">
+                <button class="btn full-width" data-turbo-confirm="Are you sure you want to ban this user? This will log them out, delete their messages, and block their IP addresses." type="submit">
+                  <img aria-hidden="true" aria-label="Ban {{ name }}" src="{{ asset_path "cancel.svg" }}">
+                  <span>Ban {{ name }}</span>
+                </button>
+              </form>
+            {% else %}
+              <form action="/users/{{ target_id }}/ban" class="button_to" method="post">
+                <input name="_method" type="hidden" value="delete">
+                <button class="btn btn--negative full-width" data-turbo-confirm="Are you sure you want to remove the ban on this user?" type="submit">
+                  <img aria-hidden="true" aria-label="Remove Ban {{ name }}" src="{{ asset_path "cancel.svg" }}">
+                  <span>Remove ban</span>
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        {% endif %}
+      {% endif %}
+    {% endif %}
+  </div>
+</section>

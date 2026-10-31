@@ -1,0 +1,41 @@
+{% args id:, name:, title:, active:, banned:, administrator:, avatar_version:, is_current:, can_administer: %}
+<li class="flex align-center gap margin-none {% if banned %}banned{% endif %}">
+  <figure class="avatar flex-item-no-shrink" style="--avatar-size: 3.75ch;">
+    <a title="{{ title }}" class="btn avatar" data-turbo-frame="_top" href="/users/{{ id }}"><img aria-hidden="true" loading="lazy" src="/users/{{ rails_signed_id id, purpose: "user/avatar", secret: :secret_key }}/avatar?v={{ avatar_version }}" width="48" height="48" /></a>
+  </figure>
+
+  <div class="min-width">
+    <div class="overflow-ellipsis fill-shade"><strong>{{ name }}</strong></div>
+  </div>
+
+  <hr class="separator" aria-hidden="true">
+
+  {% if can_administer %}
+    {% if active %}
+      <form data-controller="form" action="/account/users/{{ id }}" accept-charset="UTF-8" method="post">
+        <input type="hidden" name="_method" value="patch" />
+        <label class="btn txt-small flex-item-no-shrink" for="role_user_{{ id }}">
+          <span class="for-screen-reader">Role: {% if administrator %}Administrator{% else %}Member{% endif %}</span>
+          <img aria-hidden="true" src="{{ asset_path "crown.svg" }}" width="20" height="20" />
+          <input name="user[role]" {% if is_current %}disabled="disabled" {% endif %}type="hidden" value="member" /><input data-action="form#submit" hidden="hidden" id="role_user_{{ id }}" {% if is_current %}disabled="disabled" {% endif %}type="checkbox" value="administrator" {% if administrator %}checked="checked" {% endif %}name="user[role]" />
+        </label>
+      </form>
+      {% if is_current %}
+      {% else %}
+        <form class="button_to" action="/account/users/{{ id }}" method="post">
+          <input name="_method" type="hidden" value="delete" />
+          <button class="btn txt-small flex-item-no-shrink btn--negative" data-turbo-confirm="Are you sure you want to permanently remove this person from the account? This can’t be undone." type="submit">
+            <img aria-hidden="true" src="{{ asset_path "minus.svg" }}" width="20" height="20" />
+            <span class="for-screen-reader">Delete {{ name }}</span>
+          </button>
+        </form>
+      {% endif %}
+    {% endif %}
+  {% endif %}
+  {% if is_current %}
+    <a class="btn txt-small flex-item-no-shrink" target="_top" href="/users/me/profile">
+      <img aria-hidden="true" src="{{ asset_path "pencil.svg" }}" width="20" height="20" />
+      <span class="for-screen-reader">My settings</span>
+    </a>
+  {% endif %}
+</li>

@@ -1,0 +1,37 @@
+{% args name:, has_name:, base_url:, avatar_blob_id:, avatar_filename:, avatar_attached:, webhook_url:, has_webhook: %}
+<h1 class="for-screen-reader">Chat Bot Setup</h1>
+<label class="align-center center avatar__form gap" data-controller="upload-preview">
+  <div class="btn input--file">
+    <img aria-hidden="true" src="{{ asset_path "camera.svg" }}" width="20" height="20" />
+    <input class="input" accept="image/*" data-upload-preview-target="input" data-action="upload-preview#previewImage" type="file" name="user[avatar]" id="user_avatar" />
+    <span class="for-screen-reader">Upload bot avatar</span>
+  </div>
+  <div class="avatar input--file txt-xx-large" style="--avatar-size: var(--btn-size);">
+    {% if avatar_attached %}
+      <img alt="Bot avatar" data-upload-preview-target="image" src="{{ base_url }}/rails/active_storage/blobs/redirect/{{ active_storage_blob_id avatar_blob_id, secret: :secret_key }}/{{ avatar_filename }}" width="48" height="48" />
+    {% else %}
+      <img alt="Bot avatar" data-upload-preview-target="image" src="{{ asset_path "default-bot-avatar.svg" }}" width="48" height="48" />
+    {% endif %}
+  </div>
+</label>
+
+<div class="flex align-center gap">
+  {{ partial :translation_button, en: "Name the bot", es: "Nombrar al bot", fr: "Nommer le bot", hi: "बॉट का नाम दें", de: "Benenne den Bot", pt: "Dê um nome ao bot", ja: "ボットに名前を付ける" }}
+  <label class="flex align-center gap flex-item-grow txt-large input input--actor">
+    <input class="input" autocomplete="name" placeholder="Name the bot" autofocus="autofocus" required="required" data-1p-ignore="true" type="text" {% if has_name %}value="{{ name }}" {% endif %}name="user[name]" id="user_name" />
+    <img aria-hidden="true" class="colorize--black" src="{{ asset_path "bot.svg" }}" width="24" height="24" />
+  </label>
+</div>
+
+<div class="flex align-center gap">
+  {{ partial :translation_button, en: "Webhook URL", es: "URL del Webhook", fr: "URL du webhook", hi: "वेबहुक URL", de: "Webhook-URL", pt: "URL do Webhook", ja: "Webhook URL" }}
+  <label class="flex align-center gap flex-item-grow txt-large input input--actor">
+    <input class="input" placeholder="Webhook URL" type="url" {% if has_webhook %}value="{{ webhook_url }}" {% endif %}name="user[webhook_url]" id="user_webhook_url" />
+    <img aria-hidden="true" class="colorize--black" src="{{ asset_path "web.svg" }}" width="24" height="24" />
+  </label>
+</div>
+
+<button class="btn btn--reversed center txt-large" type="submit">
+  <img aria-hidden="true" src="{{ asset_path "check.svg" }}" width="20" height="20" />
+  <span class="for-screen-reader">Save changes</span>
+</button>

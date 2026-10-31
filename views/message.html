@@ -1,5 +1,39 @@
-{% args message_id:, creator_name:, created_at:, body: %}
-<div class="message" id="message_{{ message_id }}" data-message-id="{{ message_id }}">
-  <h3 class="message__heading"><strong class="message__author">{{ creator_name }}</strong> <time class="message__timestamp">{{ created_at }}</time></h3>
-  <turbo-frame id="edit_message_{{ message_id }}"><div class="message__body" id="presentation_message_{{ message_id }}">{{ body|sanitize }}</div></turbo-frame>
+{% args id:, param:, creator_id:, creator_name:, creator_title:, avatar_version:, created_ms:, updated_ms:, created_iso:, room_id:, room_label:, body:, base_url:, boosts:, presentation:, mentions:, renderable: %}
+{% if renderable %}
+<div id="message_{{ param }}" class="message {% if body|all_emoji %}message--emoji{% endif %}" data-controller="reply" data-user-id="{{ creator_id }}" data-message-id="{{ id }}" data-message-timestamp="{{ created_ms }}" data-message-updated-at="{{ updated_ms }}" data-sort-value="{{ created_ms }}" data-messages-target="message" data-search-results-target="message" data-refresh-room-target="message" data-reply-composer-outlet="#composer">
+  <h2 class="message__day-separator"><time datetime="{{ created_iso }}" data-local-time-target="date"></time></h2>
+
+  <figure class="avatar message__avatar">
+    {{ partial :avatar, user_id: creator_id, title: creator_title, version: avatar_version }}
+  </figure>
+
+  <turbo-frame id="edit_message_{{ param }}">
+    <div class="message__body">
+      <div class="message__body-content">
+        <div class="message__meta">
+          <h3 class="message__heading">
+            <span class="message__author" title="{{ creator_title }}">
+              <strong data-reply-target="author">{{ creator_name }}</strong>
+            </span>
+            <a class="message__permalink" target="_top" href="/rooms/{{ room_id }}/@{{ id }}"><time class="message__timestamp" datetime="{{ created_iso }}" data-local-time-target="time"></time></a>
+            <span class="message__room">
+              <a target="_top" data-reply-target="link" href="/rooms/{{ room_id }}/@{{ id }}">{{ room_label }}</a>
+            </span>
+          </h3>
+          {{ partial :message_actions, id: id, param: param, room_id: room_id, base_url: base_url, presentation: presentation }}
+        </div>
+        {{ partial :message_presentation_div, param: param, presentation: presentation, body: body, base_url: base_url, mentions: mentions }}
+        {{ partial :message_boosts, id: id, param: param, boosts: boosts }}
+      </div>
+    </div>
+  </turbo-frame>
 </div>
+{% else %}
+<div class="message message--formatted message--failed center">
+  <div class="message__body">
+    <div class="message__body-content txt-align-center">
+      Failed to load message content
+    </div>
+  </div>
+</div>
+{% endif %}

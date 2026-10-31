@@ -1,0 +1,18 @@
+{% args en:, es:, fr:, hi:, de:, pt:, ja: %}
+<details class="position-relative" data-controller="popup" data-action="keydown.esc->popup#close toggle->popup#toggle click@document->popup#closeOnClickOutside" data-popup-orientation-top-class="popup-orientation-top">
+  <summary class="btn" tabindex="-1">
+    <img src="{{ asset_path "globe.svg" }}" width="20" height="20" aria-hidden="true" class="color-icon">
+    <span class="for-screen-reader">Translate</span>
+  </summary>
+  <div class="language-list-menu shadow" data-popup-target="menu">
+    <dl class="language-list">
+      <dt>🇺🇸</dt><dd class="margin-none">{{ en }}</dd>
+      <dt>🇪🇸</dt><dd class="margin-none">{{ es }}</dd>
+      <dt>🇫🇷</dt><dd class="margin-none">{{ fr }}</dd>
+      <dt>🇮🇳</dt><dd class="margin-none">{{ hi }}</dd>
+      <dt>🇩🇪</dt><dd class="margin-none">{{ de }}</dd>
+      <dt>🇧🇷</dt><dd class="margin-none">{{ pt }}</dd>
+      <dt>🇯🇵</dt><dd class="margin-none">{{ ja }}</dd>
+    </dl>
+  </div>
+</details>

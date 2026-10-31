@@ -1,0 +1,32 @@
+{% content_for :body_class %}{{ body_class }}{% endcontent_for %}
+{% content_for :nav %}
+  <div class="flex-item-justify-start">
+    <a class="btn" href="/account/bots">
+      <img aria-hidden="true" src="{{ asset_path "arrow-left.svg" }}" width="20" height="20" />
+      <span class="for-screen-reader">Go Back</span>
+    </a>
+  </div>
+{% endcontent_for %}
+<section class="panel" style="view-transition-name: chat-bot-{{ bot_id }}">
+  <form class="flex flex-column gap" action="/account/bots/{{ bot_id }}" accept-charset="UTF-8" enctype="multipart/form-data" method="post">
+    <input type="hidden" name="_method" value="patch" />
+    {{ partial :account_bot_form, name: name, has_name: has_name, base_url: base_url, avatar_blob_id: avatar_blob_id, avatar_filename: avatar_filename, avatar_attached: avatar_attached, webhook_url: webhook_url, has_webhook: has_webhook }}
+  </form>
+  <hr class="separator full-width margin-block-double">
+  <div class="flex align-center gap justify-space-between">
+    <form class="button_to" action="/account/bots/{{ bot_id }}" method="post">
+      <input name="_method" type="hidden" value="delete" />
+      <button class="btn txt--small btn--negative" aria-label="Delete this chat bot" data-turbo-confirm="Are you sure you want to permanently remove this bot from the account? This can’t be undone." type="submit">
+        <img aria-hidden="true" src="{{ asset_path "trash.svg" }}" width="20" height="20" />
+        <img aria-hidden="true" src="{{ asset_path "bot.svg" }}" width="20" height="20" />
+      </button>
+    </form>
+    <form class="button_to" action="/account/bots/{{ bot_id }}/key" method="post">
+      <input name="_method" type="hidden" value="put" />
+      <button class="btn full-width txt--small btn--negative" aria-label="Generate a new key" data-turbo-confirm="Are you sure you want to change the bot key? All usage of this bot must be updated." type="submit">
+        <img aria-hidden="true" src="{{ asset_path "refresh.svg" }}" width="20" height="20" />
+        <img aria-hidden="true" src="{{ asset_path "key.svg" }}" width="20" height="20" />
+      </button>
+    </form>
+  </div>
+</section>

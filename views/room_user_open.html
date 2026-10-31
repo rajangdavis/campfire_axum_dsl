@@ -1,0 +1,13 @@
+{% args id:, name:, title:, version:, value:, can_administer: %}
+<li class="flex align-center gap margin-none" data-value="{{ value }}">
+  <figure class="avatar flex-item-no-shrink" style="--avatar-size: 4ch;">
+    {{ partial :room_form_avatar, user_id: id, title: title, version: version }}
+  </figure>
+  <div class="min-width">
+    <div class="overflow-ellipsis fill-shade"><strong>{{ name }}</strong></div>
+  </div>
+  <hr aria-hidden="true" class="separator">
+  {% if can_administer %}
+    <img aria-hidden="true" class="colorize--black flex-item-no-shrink" height="20" src="{{ asset_path "check.svg" }}" width="20">
+  {% endif %}
+</li>

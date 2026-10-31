@@ -1,0 +1,12 @@
+{% args can_administer:, room_name: %}
+<div class="flex align-center gap">
+  {% if can_administer %}
+    {{ partial :translation_button, en: "Name the room", es: "Nombrar la sala", fr: "Nommez la salle", hi: "कमरे का नाम दें", de: "Geben Sie dem Raum einen Namen", pt: "Dê um nome a essa sala", ja: "ルームに名前を付ける" }}
+    <label class="flex-item-grow txt-large">
+      <input autofocus="autofocus" class="input full-width" data-action="keydown.enter->form#submit:prevent" data-turbo-permanent="true" id="room_name" name="room[name]" placeholder="Name the room" required="required" type="text" value="{{ room_name }}">
+      <span class="for-screen-reader">Name this room</span>
+    </label>
+  {% else %}
+    <h1 class="flex-item-grow txt-x-large">{{ room_name }}</h1>
+  {% endif %}
+</div>

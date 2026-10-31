@@ -1,0 +1,11 @@
+{% args admin_name:, admin_email:, has_admin:, version: %}
+{% if has_admin %}
+<div class="txt-align-center margin-block-double full-width">
+  <a class="btn center" href="mailto:&quot;{{ admin_name }}&quot; &lt;{{ admin_email }}&gt;" title="Email {{ admin_name }}">
+    <img src="{{ asset_path "lifebuoy.svg" }}" aria-hidden="true">
+    <span>{{ admin_email }}</span>
+  </a>
+
+  <div class="txt-align-center center margin-block txt-subtle">Campfire&trade; version <span class="version-badge">{{ version }}</span></div>
+</div>
+{% endif %}

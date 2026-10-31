@@ -1,8 +1,26 @@
-<nav class="room-nav">
-  <a href="/users/me/sidebar">Rooms</a>
-  <form method="get" action="/searches"><input type="search" name="q" placeholder="Search"></form>
-</nav>
-<h1 class="room-name">{{ room_name }}</h1>
-<section id="messages_room_{{ room_id }}" class="messages">
-{{ partial :message_list, messages: messages }}
-</section>
+{% content_for :head %}
+  <meta name="turbo-cache-control" content="no-preview">
+  <meta name="current-room-id" content="{{ room_id }}">
+{% endcontent_for %}
+{% content_for :body_class %}{{ body_class }}{% endcontent_for %}
+
+{{ partial :room_nav, room_id: room_id, label: title, room_name: room_name, direct: direct, noun: noun, kind: kind, plural: plural, base_url: base_url, has_logo: has_logo, logo_version: logo_version, pwa_browser: pwa_browser, pwa_os: pwa_os, pwa_sc_ios: pwa_sc_ios, pwa_ff_android: pwa_ff_android, pwa_edge_desktop: pwa_edge_desktop, pwa_ff_desktop: pwa_ff_desktop, pwa_chrome_desktop: pwa_chrome_desktop, pwa_chrome_android: pwa_chrome_android, pwa_safari_desktop: pwa_safari_desktop, pwa_ffchrome_desktop: pwa_ffchrome_desktop, pwa_windows: pwa_windows, pwa_install_hidden: pwa_install_hidden, pwa_edge: pwa_edge }}
+
+{% content_for :sidebar %}<turbo-frame id="user_sidebar" src="/users/me/sidebar" target="_top" data-turbo-permanent="true" data-controller="rooms-list read-rooms turbo-frame" data-rooms-list-unread-class="unread" data-action="presence:present@window->rooms-list#read read-rooms:read->rooms-list#read turbo:frame-load->rooms-list#loaded refresh-room:visible@window->turbo-frame#reload"></turbo-frame>{% endcontent_for %}
+
+<div id="message-area" class="message-area" contents="true" data-controller="messages presence drop-target" data-action="turbo:before-stream-render@document->messages#beforeStreamRender keydown.up@document->messages#editMyLastMessage dragenter->drop-target#dragenter dragover->drop-target#dragover drop->drop-target#drop visibilitychange@document->presence#visibilityChanged" data-messages-first-of-day-class="message--first-of-day" data-messages-formatted-class="message--formatted" data-messages-me-class="message--me" data-messages-mentioned-class="message--mentioned" data-messages-threaded-class="message--threaded" data-messages-page-url-value="{{ base_url }}/rooms/{{ room_id }}/messages">
+  {{ partial :message_template, user_id: user_id, user_name: user_name, user_title: user_title, user_version: user_version }}
+
+  <div id="messages_rooms_{{ kind }}_{{ room_id }}" class="messages" data-controller="maintain-scroll refresh-room" data-action="turbo:before-stream-render@document->maintain-scroll#beforeStreamRender visibilitychange@document->refresh-room#visibilityChanged online@window->refresh-room#online" data-messages-target="messages" data-refresh-room-loaded-at-value="{{ updated_ms }}" data-refresh-room-url-value="{{ base_url }}/rooms/{{ room_id }}/refresh">
+    {% if invitation %}{{ partial :invitation, join_url: join_url, qr_id: qr_id, can_administer: can_administer, logo_version: logo_version }}{% endif %}
+    {{ partial :message_list, messages: messages, base_url: base_url }}
+  </div>
+
+  <turbo-cable-stream-source channel="RoomMessagesChannel" signed-stream-name="{{ stream_name }}"></turbo-cable-stream-source>
+  <button class="message-area__return-to-latest btn" data-action="messages#returnToLatest" data-messages-target="latest" hidden="hidden">
+    <img aria-hidden="true" src="{{ asset_path "arrow-down.svg" }}" width="20" height="20">
+    <span class="for-screen-reader">Jump to newest message</span>
+  </button>
+</div>
+
+{{ partial :composer, room_id: room_id, base_url: base_url }}

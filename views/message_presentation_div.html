@@ -1,0 +1,4 @@
+{% args param:, presentation:, body:, base_url:, mentions: %}
+<div id="presentation_message_{{ param }}" dir="auto" data-reply-target="body" data-messages-target="body">
+  {{ partial :message_presentation, presentation: presentation, body: body, base_url: base_url, mentions: mentions }}
+</div>

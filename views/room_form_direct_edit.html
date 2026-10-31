@@ -1,0 +1,22 @@
+{% content_for :body_class %}{{ body_class }}{% endcontent_for %}
+{{ partial :room_form_nav, back_room_id: back_room_id }}
+<div class="panel txt-align-center">
+  <section class="directs--edit margin-block-end">
+    {% for user in members %}
+      <div class="member flex flex-column gap fill-shade pad border-radius">
+        <figure class="avatar center" style="--avatar-border-radius: 10ch; --avatar-size: 10ch;">
+          {{ partial :room_form_avatar, user_id: user.id, title: user.title, version: user.version }}
+        </figure>
+        <strong>{{ user.name }}</strong>
+      </div>
+    {% endfor %}
+  </section>
+
+  <form action="{{ delete_url }}" class="button_to" method="post">
+    <input name="_method" type="hidden" value="delete">
+    <button aria-label="Delete Ping" class="btn btn--negative center" data-turbo-confirm="Are you sure you want to delete this ping and all messages in it? This can’t be undone." type="submit">
+      <img aria-hidden="true" src="{{ asset_path "trash.svg" }}">
+      Ping
+    </button>
+  </form>
+</div>

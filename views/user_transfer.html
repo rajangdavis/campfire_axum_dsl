@@ -1,0 +1,35 @@
+{% args is_current:, transfer_url:, qr_id: %}
+<fieldset>
+  <legend class="gap">
+    <img aria-hidden="true" class="colorize--black" height="36" src="{{ asset_path "laptop.svg" }}" width="36">
+    <img aria-hidden="true" class="colorize--black" height="36" src="{{ asset_path "transfer.svg" }}" width="36">
+    <img aria-hidden="true" class="colorize--black" height="36" src="{{ asset_path "mobile-phone.svg" }}" width="36">
+  </legend>
+
+  <div class="flex flex-column gap">
+    {% if is_current %}
+      <label class="for-screen-reader" for="session_transfer_url">Use this link to login automatically on another device</label>
+    {% else %}
+      <div class="flex align-center gap justify-center">
+        <img aria-hidden="true" class="flex-item-no-shrink colorize--black" height="16" src="{{ asset_path "crown.svg" }}" width="16">
+        <label for="session_transfer_url">Share to get them back into their account</label>
+      </div>
+    {% endif %}
+    <input class="input" id="session_transfer_url" readonly type="text" value="{{ transfer_url }}">
+
+    <div class="flex align-center center gap">
+      <a class="btn" data-action="lightbox#open" data-lightbox-target="image" data-lightbox-url-value="/qr_code/{{ qr_id }}" href="/qr_code/{{ qr_id }}">
+        <span class="for-screen-reader">Show auto-login QR code</span>
+        <img aria-hidden="true" class="colorize--black" height="20" src="{{ asset_path "qr-code.svg" }}" width="20">
+      </a>
+      <button class="btn" data-action="copy-to-clipboard#copy" data-controller="copy-to-clipboard" data-copy-to-clipboard-content-value="{{ transfer_url }}" data-copy-to-clipboard-success-class="btn--success">
+        <span class="for-screen-reader">Copy auto-login link</span>
+        <img aria-hidden="true" class="flex-item-no-shrink colorize--black" height="20" src="{{ asset_path "copy-paste.svg" }}" width="20">
+      </button>
+      <button class="btn" data-action="web-share#share" data-controller="web-share" data-web-share-text-value="This is your own private sign-in URL, DO NOT SHARE IT. Use it to sign-in on another device or if you get locked out." data-web-share-title-value="Your sign-in link" data-web-share-url-value="{{ transfer_url }}" hidden="hidden">
+        <span class="for-screen-reader">Share auto-login link</span>
+        <img aria-hidden="true" class="flex-item-no-shrink colorize--black" height="20" src="{{ asset_path "share.svg" }}" width="20">
+      </button>
+    </div>
+  </div>
+</fieldset>

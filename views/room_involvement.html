@@ -1,0 +1,6 @@
+{% content_for :body_class %}{{ body_class }}{% endcontent_for %}
+<turbo-frame id="involvement_rooms_{{ kind }}_{{ room_id }}" data-controller="turbo-frame" data-action="notifications:ready@window->turbo-frame#load" data-turbo-frame-url-param="/rooms/{{ room_id }}/involvement">
+  <form class="button_to" method="post" action="/rooms/{{ room_id }}/involvement?involvement={{ next_involvement }}"><input type="hidden" name="_method" value="put"><button role="checkbox" aria-checked="true" aria-labelledby="involvement_label_rooms_{{ kind }}_{{ room_id }}" tabindex="0" class="btn {{ involvement }}" type="submit">
+    {% if bell_mentions %}<img aria-hidden="true" src="{{ asset_path "notification-bell-mentions.svg" }}" width="20" height="20">{% endif %}{% if bell_everything %}<img aria-hidden="true" src="{{ asset_path "notification-bell-everything.svg" }}" width="20" height="20">{% endif %}{% if bell_nothing %}<img aria-hidden="true" src="{{ asset_path "notification-bell-nothing.svg" }}" width="20" height="20">{% endif %}{% if bell_invisible %}<img aria-hidden="true" src="{{ asset_path "notification-bell-invisible.svg" }}" width="20" height="20">{% endif %}<span class="for-screen-reader" id="involvement_label_rooms_{{ kind }}_{{ room_id }}">{{ label }}</span>
+  </button></form>
+</turbo-frame>

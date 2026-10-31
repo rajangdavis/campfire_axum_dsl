@@ -1,0 +1,30 @@
+{% args id:, name:, title:, version:, value:, selected:, can_administer:, new_room:, is_current: %}
+<li class="flex align-center gap margin-none" data-value="{{ value }}">
+  <figure class="avatar flex-item-no-shrink" style="--avatar-size: 4ch;">
+    {{ partial :room_form_avatar, user_id: id, title: title, version: version }}
+  </figure>
+  <div class="min-width">
+    <div class="overflow-ellipsis fill-shade"><strong>{{ name }}</strong></div>
+  </div>
+  <hr aria-hidden="true" class="separator">
+  {% if can_administer %}
+    {% if new_room %}
+      {% if is_current %}
+        <input name="user_ids[]" type="hidden" value="{{ id }}">
+        <img aria-hidden="true" class="colorize--black flex-item-no-shrink" height="20" src="{{ asset_path "check.svg" }}" width="20">
+      {% else %}
+        <label class="switch flex-item-no-shrink">
+          <input class="switch__input" name="user_ids[]" type="checkbox" value="{{ id }}">
+          <span class="switch__btn round"></span>
+          <span class="for-screen-reader">Give {{ name }} access to this room</span>
+        </label>
+      {% endif %}
+    {% else %}
+      <label class="switch flex-item-no-shrink">
+        {% if selected %}<input checked="checked" class="switch__input" name="user_ids[]" type="checkbox" value="{{ id }}">{% else %}<input class="switch__input" name="user_ids[]" type="checkbox" value="{{ id }}">{% endif %}
+        <span class="switch__btn round"></span>
+        <span class="for-screen-reader">Give {{ name }} access to this room</span>
+      </label>
+    {% endif %}
+  {% endif %}
+</li>

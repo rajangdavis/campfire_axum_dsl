@@ -1,4 +1,4 @@
-{% args messages: %}
+{% args messages:, base_url: "" %}
 {% for message in messages %}
-{{ partial :message, message_id: message.id, creator_name: message.creator_name, created_at: message.created_at, body: message.body }}
+{{ partial :message, id: message.id, param: message.param, creator_id: message.creator_id, creator_name: message.creator_name, creator_title: message.creator_title, avatar_version: message.avatar_version, created_ms: message.created_ms, updated_ms: message.updated_ms, created_iso: message.created_iso, room_id: message.room_id, room_label: message.room_label, body: message.body, base_url: base_url, boosts: message.boosts, presentation: message.presentation, mentions: message.mentions, renderable: message.renderable }}
 {% endfor %}

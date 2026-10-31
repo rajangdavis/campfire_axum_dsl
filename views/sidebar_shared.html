@@ -1,0 +1,4 @@
+{% args id:, name:, class_names:, dom_id: %}
+<a id="{{ dom_id }}" data-rooms-list-target="room" data-room-id="{{ id }}" data-badge-dot-target="unread" data-sorted-list-target="item" data-sorted-list-name="{{ name }}" style="--column-gap: 0.5em" class="{{ class_names }}" href="/rooms/{{ id }}">
+  <span class="overflow-ellipsis">{{ name }}</span>
+</a>

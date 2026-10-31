@@ -1,0 +1,115 @@
+{% content_for :body_class %}{{ body_class }}{% endcontent_for %}
+{% content_for :nav %}
+  <div class="flex-item-justify-start">
+    <a class="btn" href="{{ back_url }}">
+      <img aria-hidden="true" height="20" src="{{ asset_path "arrow-left.svg" }}" width="20">
+      <span class="for-screen-reader">Go Back</span>
+    </a>
+  </div>
+
+  <div class="flex-item-justify-end">
+    <form accept-charset="UTF-8" action="/session" data-controller="sessions" method="post">
+      <input name="_method" type="hidden" value="delete">
+      <input data-sessions-target="pushSubscriptionEndpoint" id="push_subscription_endpoint" name="push_subscription_endpoint" type="hidden">
+
+      <button class="btn" data-action="sessions#logout:prevent">
+        <img aria-hidden="true" src="{{ asset_path "logout.svg" }}">
+        <span class="for-screen-reader">Log out</span>
+      </button>
+    </form>
+  </div>
+{% endcontent_for %}
+<section class="panel flex flex-column gap" style="view-transition-name: avatar-{{ user_id }}">
+  {{ partial :pwa_install, pwa_install_hidden: pwa_install_hidden, pwa_edge: pwa_edge, pwa_ff_android: pwa_ff_android, pwa_safari_desktop: pwa_safari_desktop, pwa_sc_ios: pwa_sc_ios, pwa_browser: pwa_browser, pwa_os: pwa_os }}
+
+  <div class="align-center center avatar__form gap" data-controller="upload-preview">
+    <form accept-charset="UTF-8" action="/users/me/profile" class="txt-medium" data-controller="form" enctype="multipart/form-data" method="post">
+      <input name="_method" type="hidden" value="patch">
+      <label class="btn input--file">
+        <img aria-hidden="true" height="20" src="{{ asset_path "camera.svg" }}" width="20">
+        <input accept="image/*" class="input" data-action="upload-preview#previewImage change->form#submit" data-upload-preview-target="input" id="file" name="user[avatar]" type="file">
+        <span class="for-screen-reader">Upload avatar</span>
+      </label>
+    </form>
+    <form accept-charset="UTF-8" action="/users/me/profile" data-controller="form" enctype="multipart/form-data" method="post">
+      <input name="_method" type="hidden" value="patch">
+      <label class="btn avatar input--file txt-xx-large">
+        <img aria-hidden="true" data-upload-preview-target="image" height="300" src="/users/{{ rails_signed_id user_id, purpose: "user/avatar", secret: :secret_key }}/avatar?v={{ version }}" width="300">
+        <input accept="image/*" class="input" data-action="upload-preview#previewImage change->form#submit" data-upload-preview-target="input" id="file" name="user[avatar]" type="file">
+        <span class="for-screen-reader">Avatar</span>
+      </label>
+    </form>
+    {% if avatar_attached %}
+      <form action="/users/{{ user_id }}/avatar" class="button_to" method="post">
+        <input name="_method" type="hidden" value="delete">
+        <button class="btn btn--negative txt-small avatar__delete-btn" type="submit">
+          <img aria-hidden="true" height="20" src="{{ asset_path "minus.svg" }}" width="20">
+          <span class="for-screen-reader">Delete avatar</span>
+        </button>
+      </form>
+    {% endif %}
+  </div>
+
+  <form accept-charset="UTF-8" action="/users/me/profile" data-controller="form" method="post">
+    <input name="_method" type="hidden" value="patch">
+    <div class="flex flex-column gap">
+      <div class="flex align-center gap">
+        {{ partial :translation_button, en: "Enter your name", es: "Introduce tu nombre", fr: "Entrez votre nom", hi: "अपना नाम दर्ज करें", de: "Geben Sie Ihren Namen ein", pt: "Insira seu nome", ja: "お名前を入力してください" }}
+
+        <label class="flex align-center gap flex-item-grow input input--actor">
+          <input autocomplete="name" autofocus="autofocus" class="input txt-large " data-1p-ignore="true" id="user_name" name="user[name]" placeholder="Enter your name" required="required" type="text" value="{{ name }}">
+          <img aria-hidden="true" class="colorize--black" height="24" src="{{ asset_path "person.svg" }}" width="24">
+        </label>
+      </div>
+
+      <div class="flex align-center gap">
+        {{ partial :translation_button, en: "Enter your email address", es: "Introduce tu correo electrónico", fr: "Entrez votre adresse courriel", hi: "अपना ईमेल पता दर्ज करें", de: "Geben Sie Ihre E-Mail-Adresse ein", pt: "Insira seu endereço de email", ja: "メールアドレスを入力してください" }}
+
+        <label class="flex align-center gap flex-item-grow input input--actor">
+          <input autocomplete="username" class="input txt-large" id="user_email_address" name="user[email_address]" placeholder="Enter your email address" type="email" value="{{ email }}">
+          <img aria-hidden="true" class="colorize--black" height="24" src="{{ asset_path "email.svg" }}" width="24">
+        </label>
+      </div>
+
+      <div class="flex align-center gap">
+        {{ partial :translation_button, en: "Change password", es: "Cambiar contraseña", fr: "Changer le mot de passe", hi: "पासवर्ड बदलें", de: "Passwort ändern", pt: "Alterar senha", ja: "パスワードを変更" }}
+
+        <label class="flex align-center gap flex-item-grow input input--actor">
+          <input autocomplete="new-password" class="input txt-large" id="user_password" maxlength="72" name="user[password]" placeholder="Change password" size="72" type="password">
+          <img aria-hidden="true" class="colorize--black" height="24" src="{{ asset_path "password.svg" }}" width="24">
+        </label>
+      </div>
+
+      <div class="flex align-start gap">
+        {{ partial :translation_button, en: "Enter a few words about yourself.", es: "Ingresa algunas palabras sobre ti mismo.", fr: "Saisissez quelques mots à propos de vous-même.", hi: "अपने बारे में कुछ शब्द लिखें.", de: "Geben Sie ein paar Worte über sich selbst ein.", pt: "Insira alguma palavras sobre você.", ja: "ご自分について簡単に記入してください。" }}
+
+        <label class="flex align--center gap flex-item--grow input input--actor">
+          <textarea class="input txt-large" id="user_bio" maxlength="200" name="user[bio]" placeholder="A few words about yourself…" rows="3">
+{{ bio }}</textarea>
+          <img aria-hidden="true" class="colorize--black" height="24" src="{{ asset_path "bio.svg" }}" width="24">
+        </label>
+      </div>
+
+      <button class="btn btn--reversed center txt-large" type="submit">
+        <img aria-hidden="true" height="20" src="{{ asset_path "check.svg" }}" width="20">
+        <span class="for-screen-reader">Save changes</span>
+      </button>
+    </div>
+  </form>
+
+  <div class="margin-block pad-inline pad-block fill-shade border-radius">
+    <menu class="flex flex-column gap margin-none pad">
+      {% for membership in shared %}
+        {{ partial :profile_membership, room_id: membership.room_id, kind: membership.kind, label: membership.label, involvement: membership.involvement, next_involvement: membership.next_involvement, text: membership.text, bell_mentions: membership.bell_mentions, bell_everything: membership.bell_everything, bell_nothing: membership.bell_nothing, bell_invisible: membership.bell_invisible }}
+      {% endfor %}
+      {% if both %}
+        <hr class="separator full-width" style="--border-style: solid">
+      {% endif %}
+      {% for membership in directs %}
+        {{ partial :profile_membership, room_id: membership.room_id, kind: membership.kind, label: membership.label, involvement: membership.involvement, next_involvement: membership.next_involvement, text: membership.text, bell_mentions: membership.bell_mentions, bell_everything: membership.bell_everything, bell_nothing: membership.bell_nothing, bell_invisible: membership.bell_invisible }}
+      {% endfor %}
+    </menu>
+  </div>
+
+  {{ partial :user_transfer, is_current: true, transfer_url: transfer_url, qr_id: qr_id }}
+</section>

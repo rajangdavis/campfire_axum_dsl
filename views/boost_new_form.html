@@ -1,0 +1,25 @@
+{% args id:, param:, me_id:, me_name:, me_title:, me_version: %}
+<turbo-frame id="new_boost_message_{{ param }}">
+  <div class="boost flex-inline postion--relative max-width fill-white" style="--column-gap: var(--inline-space-half)">
+    <form class="boost__form flex align-center gap expanded" data-controller="form scroll-into-view" data-turbo-frame="boosting_message_{{ param }}" data-action="keydown.esc->form#cancel" action="/messages/{{ id }}/boosts" accept-charset="UTF-8" method="post">
+      <label class="boost__form-label flex gap" style="--column-gap: 0.7ch;" role="button" tabindex="0" aria-label="Add a boost">
+        <figure class="avatar boost__avatar flex-item-no-shrink">
+          {{ partial :avatar, user_id: me_id, title: me_title, version: me_version }}
+          <span class="for-screen-reader">{{ me_name }}</span>
+        </figure>
+
+        <input autofocus="autofocus" autocomplete="off" autocorrect="off" maxlength="16" required="required" pattern="\S+.*" data-boost-form-target="input" class="input input--boost txt-small" type="text" name="boost[content]" size="16">
+      </label>
+
+      <button name="button" type="submit" class="btn btn--reversed">
+        <img aria-hidden="true" src="{{ asset_path "check.svg" }}">
+        <span class="for-screen-reader">Submit</span>
+      </button>
+
+      <a data-turbo-frame="boosts_message_{{ param }}" data-form-target="cancel" class="btn btn--negative" href="/messages/{{ id }}/boosts">
+        <img aria-hidden="true" src="{{ asset_path "minus.svg" }}">
+        <span class="for-screen-reader">Cancel</span>
+      </a>
+    </form>
+  </div>
+</turbo-frame>

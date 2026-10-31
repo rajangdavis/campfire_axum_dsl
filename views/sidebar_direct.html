@@ -1,0 +1,25 @@
+{% args room_id:, class_names:, dom_id:, updated_ms:, display:, members:, many: %}
+<a class="{{ class_names }}" id="{{ dom_id }}" data-rooms-list-target="room" data-room-id="{{ room_id }}" data-badge-dot-target="unread" data-sorted-list-target="item" data-sorted-list-number="{{ updated_ms }}" href="/rooms/{{ room_id }}">
+  {% if many %}
+    <div class="avatar__group">
+      {% for member in members %}
+      <span class="avatar">
+        <img aria-hidden="true" src="/users/{{ rails_signed_id member.id, purpose: "user/avatar", secret: :secret_key }}/avatar?v={{ member.avatar_version }}" width="20" height="20" />
+      </span>
+      {% endfor %}
+    </div>
+  {% else %}
+    {% for member in members %}
+    <span class="avatar">
+      <img aria-hidden="true" src="/users/{{ rails_signed_id member.id, purpose: "user/avatar", secret: :secret_key }}/avatar?v={{ member.avatar_version }}" width="48" height="48" />
+    </span>
+    {% endfor %}
+  {% endif %}
+
+  <span class="direct__author flex align-center gap max-width min-width border-radius txt-small">
+    <span class="txt-nowrap overflow-ellipsis">
+      <span class="for-screen-reader">Ping with</span>
+      {{ display }}
+    </span>
+  </span>
+</a>

@@ -1,0 +1,17 @@
+<figure class="attachment attachment--content attachment--og">
+  <actiontext-opengraph-embed>
+    <div class="og-embed gap {% if twitter_avatar %}og-embed--twitter-avatar{% endif %}">
+      <div class="og-embed__content">
+        <div class="og-embed__title">
+          {% if has_href %}<a rel="noreferrer" target="_blank" href="{{ href }}">{{ title }}</a>{% else %}{{ title }}{% endif %}
+        </div>
+        <div class="og-embed__description">{{ description }}</div>
+      </div>
+      {% if has_image %}
+      <div class="og-embed__image">
+        <img src="{{ image }}" class="image center" alt="">
+      </div>
+      {% endif %}
+    </div>
+  </actiontext-opengraph-embed>
+</figure>

@@ -27,11 +27,22 @@ ENV CARGO_TARGET_DIR=/target
 RUN cargo build --release
 
 # 3. Runtime: the binary, run from the crate directory, because /assets is served from its public/.
-FROM debian:bookworm-slim
+# trixie, not bookworm: the parity layer (Track CP) builds libfaketime against trixie's glibc 2.41 and preloads
+# it into this image; the binary, built on bookworm, runs on the newer glibc.
+FROM debian:trixie-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=emit /crate/public public
+# A `file` declaration is read from the working directory at its own path; the service worker is the one outside public/.
+COPY --from=emit /crate/pwa pwa
 COPY --from=build /target/release/campfire /app/campfire
+# Keep libfaketime for the application's clock: signed transfer/invitation tokens and expiries
+# must see the seed time. The HTTP Date is made real in axum_dsl's front layer, just as the
+# reference's Thruster adds it outside faketime.
+RUN mkdir -p /rails/storage/db /rails/storage/files /app/bin && \
+    printf '#!/bin/sh\nexport PORT="${PORT:-${HTTP_PORT:-80}}"\nexec /app/campfire\n' > /app/bin/boot && \
+    chmod 755 /app/bin/boot
+
 ENV BIND=0.0.0.0 \
     DATABASE_PATH=/rails/storage/db/production.sqlite3 \
     ACTIVE_STORAGE_PATH=/rails/storage/files

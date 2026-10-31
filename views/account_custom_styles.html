@@ -1,0 +1,32 @@
+{% content_for :body_class %}{{ body_class }}{% endcontent_for %}
+{% content_for :nav %}
+  <div class="flex-item-justify-start">
+    <a class="btn" href="/account/edit">
+      <img aria-hidden="true" src="{{ asset_path "arrow-left.svg" }}" width="20" height="20" />
+      <span class="for-screen-reader">Go Back</span>
+    </a>
+  </div>
+{% endcontent_for %}
+<section class="panel panel--wide txt-align-center flex flex-column position-relative" style="view-transition-name: custom-styles">
+  <form class="flex flex-column gap" data-controller="form" data-action="keydown.ctrl+enter->form#submit keydown.meta+enter->form#submit" action="{{ custom_styles_action }}" accept-charset="UTF-8" method="post">
+    <input type="hidden" name="_method" value="patch" />
+    <div class="panel__button">
+      {{ partial :translation_button, en: "Add custom CSS styles. Use Caution: you could break things.", es: "Agrega estilos CSS personalizados. Usa precaución: podrías romper cosas.", fr: "Ajoutez des styles CSS personnalisés. Utilisez avec précaution : vous pourriez casser des choses.", hi: "कस्टम CSS स्टाइल जोड़ें। सावधानी बरतें: आप चीज़ों को तोड़ सकते हैं।", de: "Fügen Sie benutzerdefinierte CSS-Stile hinzu. Vorsicht: Sie könnten Dinge kaputt machen.", pt: "Adicione estilos CSS personalizados. Use com cuidado: você pode quebrar coisas.", ja: "カスタムCSSスタイルを追加。注意: サイトが壊れる可能性があります。" }}
+    </div>
+    <div class="pad-inline-double margin-inline">
+      <h1 class="margin-none">Custom CSS</h1>
+      <p class="flex flex-wrap align-center justify-center gap margin-none-block-start" style="--column-gap: 0.5ch; --row-gap: 0">
+        <span>Add custom CSS styles.</span>
+        <img aria-hidden="true" class="flex-inline colorize--black" src="{{ asset_path "alert.svg" }}" width="16" height="16" />
+        <span>Use Caution: you could break things.</span>
+      </p>
+    </div>
+    <label class="flex align-start gap flex-item-grow">
+      <textarea class="input input--code txt--small" placeholder="Add CSS styles…" autocomplete="off" spellcheck="false" autocorrect="off" autocapitalize="off" rows="16" name="account[custom_styles]" id="account_custom_styles">{{ custom_styles }}</textarea>
+    </label>
+    <button class="btn btn--reversed center txt-large" name="button" type="submit">
+      <img aria-hidden="true" src="{{ asset_path "check.svg" }}" width="20" height="20" />
+      <span class="for-screen-reader">Save changes</span>
+    </button>
+  </form>
+</section>

@@ -1,0 +1,12 @@
+{% content_for :body_class %}sidebar{% endcontent_for %}
+
+{% content_for :sidebar %}<turbo-frame id="user_sidebar" src="/users/me/sidebar" target="_top" data-turbo-permanent="true" data-controller="rooms-list read-rooms turbo-frame" data-rooms-list-unread-class="unread" data-action="presence:present@window->rooms-list#read read-rooms:read->rooms-list#read turbo:frame-load->rooms-list#loaded refresh-room:visible@window->turbo-frame#reload"></turbo-frame>{% endcontent_for %}
+
+<div id="message-area" class="message-area">
+  <div class="message-area--empty min-width center">
+    <figure class="center pad">
+      <img aria-hidden="true" class="colorize--black translucent" src="{{ asset_path "messages-empty.svg" }}">
+      <span class="for-screen-reader">{{ user_name }}</span>
+    </figure>
+  </div>
+</div>

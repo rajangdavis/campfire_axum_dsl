@@ -1,0 +1,12 @@
+{% for user in users %}<lexxy-prompt-item search="{{ user.name }}" sgid="{{ rails_signed_global_id "User", user.id, app: "campfire", secret: :secret_key }}">
+  <template type="menu">
+    <span class="autocomplete__item flex align-center gap unpad">
+      {{ partial :avatar, user_id: user.id, title: user.title, version: user.avatar_version }}
+      <span class="autocompletable__name">{{ user.name }}</span>
+    </span>
+  </template>
+  <template type="editor">
+    <span class="mention" sgid="{{ rails_signed_global_id "User", user.id, app: "campfire", secret: :secret_key }}">{{ partial :avatar, user_id: user.id, title: user.title, version: user.avatar_version }} {{ user.name }}</span>
+  </template>
+</lexxy-prompt-item>
+{% endfor %}

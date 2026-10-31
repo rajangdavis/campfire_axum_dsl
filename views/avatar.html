@@ -1,0 +1,2 @@
+{% args user_id:, title:, version: %}
+<a title="{{ title }}" class="btn avatar" data-turbo-frame="_top" href="/users/{{ user_id }}"><img aria-hidden="true" src="/users/{{ rails_signed_id user_id, purpose: "user/avatar", secret: :secret_key }}/avatar?v={{ version }}" width="48" height="48" /></a>

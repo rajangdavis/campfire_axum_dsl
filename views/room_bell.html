@@ -1,0 +1,35 @@
+{% args room_id:, kind:, noun:, base_url:, pwa_browser:, pwa_os:, pwa_sc_ios:, pwa_ff_android:, pwa_edge_desktop:, pwa_ff_desktop:, pwa_chrome_desktop:, pwa_chrome_android:, pwa_safari_desktop:, pwa_ffchrome_desktop:, pwa_windows:, pwa_install_hidden:, pwa_edge: %}
+<span>
+  <span class="button_to_change_notifying" data-controller="notifications" data-notifications-subscriptions-url-value="/users/me/push_subscriptions" data-notifications-attention-class="btn--pulsing">
+    <turbo-frame id="involvement_rooms_{{ kind }}_{{ room_id }}" data-controller="turbo-frame" data-action="notifications:ready@window->turbo-frame#load" data-turbo-frame-url-param="/rooms/{{ room_id }}/involvement">
+      <button class="btn" data-action="click->notifications#attemptToSubscribe" data-notifications-target="bell">
+        <img aria-hidden="true" src="{{ asset_path "notification-bell-loading.svg" }}" width="20" height="20">
+        <img aria-hidden="true" src="{{ asset_path "notification-bell-alert.svg" }}" width="20" height="20" hidden="hidden">
+        <span class="for-screen-reader">Notification settings for this {{ noun }}</span>
+      </button>
+    </turbo-frame>
+
+    <dialog data-notifications-target="notAllowedNotice" class="dialog pad center center-block border-radius border shadow" style="--inline-space: var(--block-space)">
+      <div class="flex flex-column txt-align-center">
+        <span class="btn btn--faux center txt-x-large">
+          <img aria-hidden="true" src="{{ asset_path "notification-bell-alert.svg" }}" width="48" height="48">
+          <span class="for-screen-reader">Notifications alert</span>
+        </span>
+
+        <section>
+          <h1 class="txt-large margin-none">Notifications aren’t allowed</h1>
+          <div class="txt-align-start margin-block-start">
+            {{ partial :pwa_help, base_url: base_url, pwa_browser: pwa_browser, pwa_os: pwa_os, pwa_sc_ios: pwa_sc_ios, pwa_ff_android: pwa_ff_android, pwa_edge_desktop: pwa_edge_desktop, pwa_ff_desktop: pwa_ff_desktop, pwa_chrome_desktop: pwa_chrome_desktop, pwa_chrome_android: pwa_chrome_android, pwa_safari_desktop: pwa_safari_desktop, pwa_ffchrome_desktop: pwa_ffchrome_desktop, pwa_windows: pwa_windows, pwa_install_hidden: pwa_install_hidden, pwa_edge: pwa_edge }}
+          </div>
+        </section>
+
+        <form method="dialog" class="flex align-center gap center">
+          <button class="btn dialog__close" autofocus="true">
+            <span class="for-screen-reader">Close</span>
+            <img aria-hidden="true" src="{{ asset_path "remove.svg" }}" width="20" height="20">
+          </button>
+        </form>
+      </div>
+    </dialog>
+  </span>
+</span>

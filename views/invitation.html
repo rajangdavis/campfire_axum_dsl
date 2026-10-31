@@ -1,0 +1,18 @@
+{% args join_url:, qr_id:, can_administer:, logo_version: %}
+<div id="system_welcome" class="message message--formatted txt-align-center center">
+  <div class="message__body center">
+    <div class="message__body-content position-relative">
+      <figure class="account-logo avatar center margin-block-end txt-large"><img alt="Account logo" src="/account/logo?v={{ logo_version }}" width="300" height="300"></figure>
+      <div class="flex align-center gap">
+        <div class="system-welcome--translation">
+          {{ partial :translation_button, en: "Welcome to Campfire. To invite some people to chat with you, share the join link below.", es: "Bienvenido a Campfire. Para invitar a algunas personas a chatear contigo, comparte el enlace de unión que se encuentra a continuación.", fr: "Bienvenue sur Campfire. Pour inviter des personnes à discuter avec vous, partagez le lien pour rejoindre ci-dessous.", hi: "Campfire में आपका स्वागत है। अधिक लोगों को चैट के लिए आमंत्रित करने के लिए, नीचे जुड़ने का लिंक साझा करें।", de: "Willkommen bei Campfire. Um einige Personen zum Chatten einzuladen, teilen Sie den unten stehenden Beitrittslink.", pt: "Boas vindas ao Campfire. Para convidar pessoas para conversarem com você, compartilhe o link de convite abaixo.", ja: "Campfireへようこそ。他の人をチャットに招待するには、下記の参加リンクを共有してください。" }}
+        </div>
+        <p>
+          <strong>Welcome to Campfire</strong><br>
+          To invite people to chat, share the join link below.
+        </p>
+      </div>
+      {{ partial :invite, join_url: join_url, qr_id: qr_id, can_administer: can_administer }}
+    </div>
+  </div>
+</div>

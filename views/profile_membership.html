@@ -1,0 +1,19 @@
+{% args room_id:, kind:, label:, involvement:, next_involvement:, text:, bell_mentions:, bell_everything:, bell_nothing:, bell_invisible: %}
+<li class="flex align-center gap margin-none min-width membership-item">
+  <a class="overflow-ellipsis fill-shade txt-primary txt-undecorated" href="/rooms/{{ room_id }}">
+    <strong>{{ label }}</strong>
+  </a>
+  <hr aria-hidden="true" class="separator">
+
+  <span class="txt-small">
+    <turbo-frame id="involvement_rooms_{{ kind }}_{{ room_id }}">
+      <form action="/rooms/{{ room_id }}/involvement?involvement={{ next_involvement }}" class="button_to" method="post">
+        <input name="_method" type="hidden" value="put">
+        <button aria-checked="true" aria-labelledby="involvement_label_rooms_{{ kind }}_{{ room_id }}" class="btn {{ involvement }}" role="checkbox" tabindex="0" type="submit">
+          {% if bell_mentions %}<img aria-hidden="true" height="20" src="{{ asset_path "notification-bell-mentions.svg" }}" width="20">{% endif %}{% if bell_everything %}<img aria-hidden="true" height="20" src="{{ asset_path "notification-bell-everything.svg" }}" width="20">{% endif %}{% if bell_nothing %}<img aria-hidden="true" height="20" src="{{ asset_path "notification-bell-nothing.svg" }}" width="20">{% endif %}{% if bell_invisible %}<img aria-hidden="true" height="20" src="{{ asset_path "notification-bell-invisible.svg" }}" width="20">{% endif %}
+          <span class="for-screen-reader" id="involvement_label_rooms_{{ kind }}_{{ room_id }}">{{ text }}</span>
+        </button>
+      </form>
+    </turbo-frame>
+  </span>
+</li>

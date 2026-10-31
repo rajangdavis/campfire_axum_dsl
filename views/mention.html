@@ -1,0 +1,2 @@
+{% args id:, name:, title:, version: %}
+<span class="mention" sgid="{{ rails_signed_global_id "User", id, app: "campfire", secret: :secret_key }}">{{ partial :avatar, user_id: id, title: title, version: version }} {{ name }}</span>

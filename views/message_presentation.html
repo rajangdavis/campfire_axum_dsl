@@ -1,0 +1,44 @@
+{% args presentation:, body:, base_url:, mentions: %}
+{% for p in presentation %}
+{% if p.is_text %}
+{% if body|sound :message_body %}{{ body|sanitize :message_body, host: base_url, mentions: mentions }}{% else %}<div class="lexxy-content">{{ body|sanitize :message_body, host: base_url, mentions: mentions }}</div>{% endif %}
+{% endif %}
+{% if p.is_image %}
+{% if p.has_dims %}
+<div class="max-inline-size center flex overflow-clip" style="width: {{ p.box_width }}px; aspect-ratio: {{ p.aspect }};">
+  <a class="flex" data-lightbox-target="image" data-action="lightbox#open" data-lightbox-url-value="/rails/active_storage/blobs/redirect/{{ active_storage_blob_id p.blob_id, secret: :secret_key }}/{{ p.filename_path }}?disposition=attachment" href="/rails/active_storage/blobs/redirect/{{ active_storage_blob_id p.blob_id, secret: :secret_key }}/{{ p.filename_path }}">
+    <img class="message__attachment" loading="lazy" width="{{ p.width }}" height="{{ p.height }}" src="/rails/active_storage/representations/redirect/{{ active_storage_blob_id p.blob_id, secret: :secret_key }}/{{ active_storage_variation p.format, resize_to_limit: [1200, 800], secret: :secret_key }}/{{ p.filename_path }}">
+  </a>
+</div>
+{% else %}
+<div class="max-inline-size center overflow-clip">
+  <a class="flex" data-lightbox-target="image" data-action="lightbox#open" data-lightbox-url-value="/rails/active_storage/blobs/redirect/{{ active_storage_blob_id p.blob_id, secret: :secret_key }}/{{ p.filename_path }}?disposition=attachment" href="/rails/active_storage/blobs/redirect/{{ active_storage_blob_id p.blob_id, secret: :secret_key }}/{{ p.filename_path }}">
+    <img class="message__attachment" loading="lazy" src="/rails/active_storage/representations/redirect/{{ active_storage_blob_id p.blob_id, secret: :secret_key }}/{{ active_storage_variation p.format, resize_to_limit: [1200, 800], secret: :secret_key }}/{{ p.filename_path }}">
+  </a>
+</div>
+{% endif %}
+{% endif %}
+{% if p.is_video %}
+{% if p.has_dims %}
+<div class="max-inline-size center flex overflow-clip" style="width: {{ p.box_width }}px; aspect-ratio: {{ p.aspect }};">
+  <video class="message__attachment" controls="controls" preload="none" width="100%" height="100%" src="/rails/active_storage/blobs/redirect/{{ active_storage_blob_id p.blob_id, secret: :secret_key }}/{{ p.filename_path }}" poster="/rails/active_storage/representations/redirect/{{ active_storage_blob_id p.blob_id, secret: :secret_key }}/{{ active_storage_variation p.format, resize_to_limit: [1200, 800], secret: :secret_key }}/{{ p.filename_path }}"></video>
+</div>
+{% else %}
+<div class="max-inline-size center overflow-clip">
+  <video class="message__attachment" controls="controls" preload="none" width="100%" height="100%" src="/rails/active_storage/blobs/redirect/{{ active_storage_blob_id p.blob_id, secret: :secret_key }}/{{ p.filename_path }}" poster="/rails/active_storage/representations/redirect/{{ active_storage_blob_id p.blob_id, secret: :secret_key }}/{{ active_storage_variation p.format, resize_to_limit: [1200, 800], secret: :secret_key }}/{{ p.filename_path }}"></video>
+</div>
+{% endif %}
+{% endif %}
+{% if p.is_file %}
+<div class="flex-inline align-center gap-half">
+  <img class="colorize--black" aria-hidden="true" src="{{ asset_path "common-file-text.svg" }}" width="22" height="22">
+  <span>{{ p.filename }}</span>
+  <a class="btn message__action-btn hide-in-ios-pwa" style="--width: auto;" href="/rails/active_storage/blobs/redirect/{{ active_storage_blob_id p.blob_id, secret: :secret_key }}/{{ p.filename_path }}?disposition=attachment">
+    <img aria-hidden="true" src="{{ asset_path "download.svg" }}" width="20" height="20"><span class="for-screen-reader">Download {{ p.filename }}</span>
+  </a>
+  <button class="btn message__action-btn" style="--width: auto;" data-controller="web-share" data-action="web-share#share" data-web-share-files-value="/rails/active_storage/blobs/redirect/{{ active_storage_blob_id p.blob_id, secret: :secret_key }}/{{ p.filename_path }}?disposition=attachment">
+    <img aria-hidden="true" src="{{ asset_path "share.svg" }}" width="20" height="20"><span class="for-screen-reader">Share {{ p.filename }}</span>
+  </button>
+</div>
+{% endif %}
+{% endfor %}

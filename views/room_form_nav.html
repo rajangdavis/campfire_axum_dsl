@@ -1,0 +1,9 @@
+{% args back_room_id: %}
+{% content_for :nav %}
+<div class="flex-item-justify-start">
+  <a class="btn" href="/rooms/{{ back_room_id }}">
+    <img aria-hidden="true" height="20" src="{{ asset_path "arrow-left.svg" }}" width="20">
+    <span class="for-screen-reader">Go Back</span>
+  </a>
+</div>
+{% endcontent_for %}

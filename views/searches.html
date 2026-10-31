@@ -1,7 +1,82 @@
-<nav class="room-nav">
-  <a href="/users/me/sidebar">Rooms</a>
-  <form method="get" action="/searches"><input type="search" name="q" value="{{ terms }}" placeholder="Search"></form>
-</nav>
-<section id="search_results" class="messages">
-{{ partial :message_list, messages: messages }}
-</section>
+{% content_for :body_class %}{{ body_class }}{% endcontent_for %}
+{% content_for :nav %}
+  {% if has_query %}
+    <div class="searches__query flex align-center gap pad-block-start-half">
+      <div class="btn btn--reversed btn--faux align-center gap txt-nowrap">
+        <span class="overflow-ellipsis">“{{ terms }}”</span>
+        <span class="flex-item-no-shrink">{{ count }}</span>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="searches__recents align-center gap pad-block-half overflow-y overflow-hide-scrollbar">
+    {% for search in recents %}
+      <a class="align-center gap room btn txt-nowrap" href="/searches?q={{ search.query }}">
+        <span class="overflow-ellipsis">“{{ search.query }}”</span>
+      </a>
+    {% endfor %}
+
+    {% if has_recents %}
+      <form class="button_to" method="post" action="{{ base_url }}/searches/clear"><input type="hidden" name="_method" value="delete"><button class="btn searches__btn" data-turbo-confirm="Are you sure you want to clear your recent searches?" type="submit">
+        <img aria-hidden="true" src="{{ asset_path "broom.svg" }}">
+        <span class="for-screen-reader">Clear recent searches</span>
+      </button></form>
+    {% endif %}
+  </div>
+{% endcontent_for %}
+
+{% content_for :sidebar %}
+  <div class="rooms position-relative flex flex-column gap overflow-y overflow-hide-scrollbar">
+    {% for search in recents %}
+      <a class="align-center gap room btn txt-nowrap" href="/searches?q={{ search.query }}">
+        <span class="overflow-ellipsis">“{{ search.query }}”</span>
+      </a>
+    {% endfor %}
+
+    {% if has_recents %}
+      <form class="button_to" method="post" action="{{ base_url }}/searches/clear"><input type="hidden" name="_method" value="delete"><button class="btn searches__btn" data-turbo-confirm="Are you sure you want to clear your recent searches?" type="submit">
+        <img aria-hidden="true" src="{{ asset_path "broom.svg" }}">
+        <span class="for-screen-reader">Clear recent searches</span>
+      </button></form>
+    {% endif %}
+  </div>
+{% endcontent_for %}
+
+<div id="message-area" class="message-area">
+  <div class="message-area--empty min-width center">
+    <figure class="center pad">
+      <img aria-hidden="true" class="colorize--black translucent" src="{{ asset_path "search.svg" }}">
+    </figure>
+  </div>
+
+  <div id="search-results" class="messages searches__results" data-controller="search-results" data-search-results-target="messages" data-search-results-me-class="message--me" data-search-results-threaded-class="message--threaded" data-search-results-mentioned-class="message--mentioned" data-search-results-formatted-class="message--formatted">
+    {{ partial :message_list, messages: messages, base_url: base_url }}
+  </div>
+</div>
+
+{% content_for :footer %}
+  <div class="composer flex align-end gap">
+    <a class="btn flex-item-no-shrink margin-block-end" style="view-transition-name: input-switcher; --btn-border-radius: 0.5em" href="/rooms/{{ return_to }}">
+      <img aria-hidden="true" src="{{ asset_path "arrow-left.svg" }}">
+      <span class="for-screen-reader">Exit search </span>
+    </a>
+
+    <form class="margin-block flex-item-grow contain flex align-center gap" data-controller="form" data-action="keydown.esc->form#cancel" action="/searches" accept-charset="UTF-8" method="post">
+      <div class="composer__input flex align-center flex-item-grow gap full-width input input--actor min-width">
+        <img aria-hidden="true" class="composer__input-hint colorize--black" style="view-transition-name: input-btn;" width="20" height="20" src="{{ asset_path "search.svg" }}">
+
+        <input type="text" name="q" id="q"{% if has_raw %} value="{{ raw_q }}"{% endif %} class="searches__input input flex-item-grow" role="searchbox" aria-label="search" autofocus="autofocus" required="required">
+
+        <a data-form-target="cancel" role="button" class="searches__reset" href="/searches">
+          <img aria-hidden="true" class="colorize--black" width="14" height="14" src="{{ asset_path "remove.svg" }}">
+          <span class="for-screen-reader">Clear search field</span>
+        </a>
+
+        <button name="button" type="submit" class="btn btn--reversed flex-item-no-shrink txt-small" style="--btn-border-radius: 0.5em">
+          <img aria-hidden="true" src="{{ asset_path "arrow-up.svg" }}">
+          <span class="for-screen-reader">Search</span>
+        </button>
+      </div>
+    </form>
+  </div>
+{% endcontent_for %}

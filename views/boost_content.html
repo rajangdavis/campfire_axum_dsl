@@ -1,0 +1,2 @@
+{% args content: %}
+{% if content|all_emoji %}<span role="button" class="txt-small txt-medium" data-action="click->boost-delete#reveal keydown.enter->boost-delete#reveal:prevent" data-boost-delete-target="content">{{ content }}</span>{% else %}<span role="button" class="txt-small" data-action="click->boost-delete#reveal keydown.enter->boost-delete#reveal:prevent" data-boost-delete-target="content">{{ content }}</span>{% endif %}

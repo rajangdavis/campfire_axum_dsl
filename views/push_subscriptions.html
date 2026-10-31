@@ -1,0 +1,36 @@
+{% content_for :body_class %}{{ body_class }}{% endcontent_for %}
+{{ partial :room_form_nav, back_room_id: back_room_id }}
+<section class="panel panel--wide flex flex-column gap">
+  <h1 class="txt-align-center txt-large margin-none">Push Notification Subscriptions</h1>
+  <div class="pad-inline fill-shade border-radius" id="push_subscriptions">
+    <menu class="pad flex flex-column gap">
+      {% for subscription in subscriptions %}
+        <li class="flex flex-column margin-none membership-item">
+          <span class="overflow-ellipsis txt-primary txt-undecorated">
+            <strong>{{ subscription.browser }} {{ subscription.version }} on {{ subscription.platform }}</strong><br>
+          </span>
+
+          <span class="flex align-start gap txt-small">
+            <span>{{ subscription.endpoint }}</span>
+
+            <span class="flex align-center gap">
+              <form action="/users/me/push_subscriptions/{{ subscription.id }}/test_notifications" class="button_to" method="post">
+                <button class="btn btn--reversed" type="submit">
+                  <img aria-hidden="true" height="20" src="{{ asset_path "notification-bell-everything.svg" }}" width="20">
+                  <span class="for-screen-reader">Send test notification</span>
+                </button>
+              </form>
+              <form action="/users/me/push_subscriptions/{{ subscription.id }}" class="button_to" method="post">
+                <input name="_method" type="hidden" value="delete">
+                <button class="btn btn--negative" type="submit">
+                  <img aria-hidden="true" height="20" src="{{ asset_path "minus.svg" }}" width="20">
+                  <span class="for-screen-reader">Delete subscription</span>
+                </button>
+              </form>
+            </span>
+          </span>
+        </li>
+      {% endfor %}
+    </menu>
+  </div>
+</section>

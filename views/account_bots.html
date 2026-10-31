@@ -1,0 +1,32 @@
+{% content_for :body_class %}{{ body_class }}{% endcontent_for %}
+{% content_for :nav %}
+  <div class="flex-item-justify-start">
+    <a class="btn" href="/account/edit">
+      <img aria-hidden="true" src="{{ asset_path "arrow-left.svg" }}" width="20" height="20" />
+      <span class="for-screen-reader">Go Back</span>
+    </a>
+  </div>
+{% endcontent_for %}
+<section class="panel panel--wide txt-align-center flex flex-column position-relative" style="view-transition-name: chat-bots">
+  <div class="flex align-center gap">
+    <div class="panel__button">
+      {{ partial :translation_button, en: "Chat bots. With Chat bots, other sites and services can post updates directly to Campfire.", es: "Bots de chat. Con los bots de chat, otros sitios y servicios pueden publicar actualizaciones directamente en Campfire.", fr: "Bots de discussion. Avec les bots de discussion, d'autres sites et services peuvent publier des mises à jour directement sur Campfire.", hi: "चैट बॉट। चैट बॉट के साथ, अन्य साइटों और सेवाएं सीधे कैम्पफायर में अपडेट पोस्ट कर सकती हैं।", de: "Chat-Bots. Mit Chat-Bots können andere Websites und Dienste Updates direkt in Campfire veröffentlichen.", pt: "Chat bots. Com Chat bots, outros sites e serviços podem postar atualizações diretamente no Campfire.", ja: "チャットボット。チャットボットを使用すると、他のサイトやサービスがCampfireに直接更新情報を投稿できます。" }}
+    </div>
+    <div class="pad-inline-double center">
+      <h1 class="margin-none">Chat bots</h1>
+      <p class="margin-none-block-start">With Chat bots, other sites and services can post updates directly to Campfire.</p>
+      <a class="btn btn--reversed txt-large" aria-label="Add a chat bot" href="/account/bots/new">
+        <img aria-hidden="true" src="{{ asset_path "bot.svg" }}" width="20" height="20" />
+        <img aria-hidden="true" src="{{ asset_path "add.svg" }}" width="20" height="20" />
+      </a>
+    </div>
+  </div>
+
+  <div class="pad-inline pad-block-start ">
+    <menu class="flex flex-column gap margin-none pad">
+      {% for bot in bots %}
+        {{ partial :account_bot, bot_id: bot.id, name: bot.name, title: bot.title, avatar_version: bot.avatar_version, bot_key: bot.bot_key, rooms: bot.rooms, base_url: base_url }}
+      {% endfor %}
+    </menu>
+  </div>
+</section>

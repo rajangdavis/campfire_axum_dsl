@@ -1,0 +1,54 @@
+{% content_for :body_class %}{{ body_class }}{% endcontent_for %}
+{{ partial :room_form_nav, back_room_id: back_room_id }}
+<section class="panel txt-align-center" style="view-transition-name: {{ view_transition }}">
+  <form accept-charset="UTF-8" action="{{ form_url }}" method="post">
+    {% if editing %}<input name="_method" type="hidden" value="patch">{% endif %}
+    {{ partial :room_form_title, can_administer: can_administer, room_name: room_name }}
+    <hr class="margin-block borderless">
+    <section class="room-access margin-block pad-inline fill-shade border-radius">
+      <menu class="flex flex-column gap margin-none pad overflow-y constrain-height" data-controller="filter" data-filter-active-class="filter--active" data-filter-selected-class="selected">
+        <li class="flex align-center gap margin-none">
+          <figure class="avatar flex-item-no-shrink" style="--avatar-border-radius: 0; --avatar-size: 4ch;">
+            <img aria-hidden="true" class="colorize--black" src="{{ asset_path "everyone.svg" }}" style="background-color: transparent">
+            <span class="for-screen-reader">Everyone</span>
+          </figure>
+          <div class="min-width">
+            <div class="overflow-ellipsis fill-shade"><strong>Everyone</strong></div>
+          </div>
+          <hr aria-hidden="true" class="separator">
+          {% if can_administer %}
+            <a class="btn--faux flex-inline" data-turbo-action="replace" href="{{ type_change_url }}" tabindex="-1">
+              <label class="switch" for="room_type">
+                <input checked="checked" class="switch__input" id="room_type" type="checkbox">
+                <span class="switch__btn round"></span>
+                <span class="for-screen-reader">Give only some access to this room</span>
+              </label>
+            </a>
+          {% endif %}
+        </li>
+        <hr class="separator full-width" style="--border-style: solid">
+        {% if search %}<input autocomplete="off" autocorrect="off" class="input input--transparent full-width" data-1p-ignore="true" data-action="input->filter#filter" id="search" placeholder="Filter…" type="search">{% endif %}
+        <div contents data-filter-target="list">
+          {% for user in users %}{{ partial :room_user_open, id: user.id, name: user.name, title: user.title, version: user.version, value: user.value, can_administer: can_administer }}{% endfor %}
+        </div>
+      </menu>
+    </section>
+    {% if can_administer %}
+      <button class="btn btn--reversed txt-large center" name="button" type="submit">
+        <img aria-hidden="true" height="20" src="{{ asset_path "check.svg" }}" width="20">
+        <span class="for-screen-reader">Save</span>
+      </button>
+    {% endif %}
+  </form>
+</section>
+{% if show_delete %}
+  <section class="panel txt-align-center">
+    <form action="{{ delete_url }}" class="button_to" method="post">
+      <input name="_method" type="hidden" value="delete">
+      <button aria-label="Delete {{ room_name }}" class="btn btn--negative max-width" data-turbo-confirm="Are you sure you want to delete this room and all messages in it? This can’t be undone." type="submit">
+        <img aria-hidden="true" height="20" src="{{ asset_path "trash.svg" }}" width="20">
+        <span class="overflow-ellipsis">{{ room_name }}</span>
+      </button>
+    </form>
+  </section>
+{% endif %}

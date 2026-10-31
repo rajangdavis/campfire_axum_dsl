@@ -1,0 +1,36 @@
+<turbo-frame id="direct_rooms_control" target="_top">
+  <div class="directs directs--new flex flex-column gap">
+    <form accept-charset="UTF-8" action="/rooms/directs" class="flex gap flex-item-grow" data-action="keydown.esc->form#cancel" data-controller="form" method="post">
+      <a class="btn flex-item-no-shrink" data-form-target="cancel" data-turbo-frame="user_sidebar" href="/users/me/sidebar">
+        <img aria-hidden="true" src="{{ asset_path "arrow-left.svg" }}">
+        <span class="for-screen-reader">Cancel changes</span>
+      </a>
+
+      <section class="autocomplete__container unpad input input--actor">
+        <div class="autocomplete__input input flex flex-wrap position-relative flex-item-grow" data-autocomplete-url-value="/autocompletable/users" data-controller="autocomplete">
+          <select data-autocomplete-target="select" data-template-id="autocompletable-user" hidden multiple="true" name="user_ids[]" required></select>
+
+          <template id="autocompletable-user">
+            <div class="autocomplete__pill max-width" data-value="" tabindex="0">
+              <img class="avatar flex-item-no-shrink" data-content="avatar" src="">
+              <span class="autocomplete-field__selected-value-text overflow-ellipsis flex-item-grow" data-content="label"></span>
+              <button class="btn btn--plain txt-small translucent flex-item-no-shrink" data-action="autocomplete#remove:prevent" data-value="" tabindex="-1" type="button">
+                <img aria-hidden="true" class="colorize--black" src="{{ asset_path "remove-circle.svg" }}">
+                <span class="for-screen-reader">Remove <span data-content="screenReaderLabel"></span></span>
+              </button>
+            </div>
+          </template>
+
+          <input autocomplete="off" autocorrect="off" class="autocomplete__input input flex flex-wrap position-relative" data-1p-ignore="true" data-action="input->autocomplete#search keydown->autocomplete#didPressKey" data-autocomplete-target="input" id="rooms_direct_user_ids_input" name="rooms_direct[user_ids_input]" type="text">
+        </div>
+      </section>
+
+      <button class="btn btn--reversed flex-item-no-shrink" name="button" type="submit">
+        <img aria-hidden="true" src="{{ asset_path "check.svg" }}">
+        <span class="for-screen-reader">Start Ping</span>
+      </button>
+    </form>
+
+    <span class="txt-small translucent pad-inline-half center">Type names to ping someone…</span>
+  </div>
+</turbo-frame>
