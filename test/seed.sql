@@ -32,7 +32,7 @@ INSERT INTO active_storage_attachments (id, blob_id, record_type, record_id, nam
   (2, 2, 'ActiveStorage::VariantRecord', 1, 'image', '2025-01-01 08:00:00.000');
 
 INSERT INTO active_storage_variant_records (id, blob_id, variation_digest)
-  VALUES (1, 1, 'campfire-test-square');
+  VALUES (1, 1, '6gwfjNKv9eUy9jNUtEZvQFLU0hQ=');
 
 INSERT INTO rooms (id, name, type, creator_id, created_at, updated_at) VALUES
   (1, 'Watercooler',     'Rooms::Open',   1, '2025-01-01 08:30:00.000', '2025-01-01 08:30:00.000'),

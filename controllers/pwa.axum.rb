@@ -1,12 +1,20 @@
-fragment do
+controller do
   # PwaController (allow_unauthenticated_access, skip_forgery_protection): the web app manifest and the service worker.
-  get "/webmanifest.json", description: "Web app manifest", skip: [:authenticate] do
+  def manifest
+    # Before the first run there is no account: Rails' `Current.account&.name || "Campfire"`, and
+    # fresh_account_logo_path leaves `v` off when the account's updated_at is nil.
     acct = account_page
-    return halt(500, "no account") if acct.nil?
-    render :manifest, layout: nil, content_type: "application/json; charset=utf-8", locals: { name: acct.name, logo_version: acct.logo_version, origin: request_base_url }
+    name = acct.nil? ? "Campfire" : acct.name
+    version = acct.nil? ? "" : acct.logo_version
+    logo_src = version.empty? ? "/account/logo" : "/account/logo?v=#{version}"
+    logo_small_src = version.empty? ? "/account/logo?size=small" : "/account/logo?size=small&v=#{version}"
+    # PwaController allow_unauthenticated_access: the session is not resumed, so session_token is not written back.
+    headers "X-Rack-Defaults" => "unauthenticated"
+    render :manifest, layout: nil, content_type: "application/json; charset=utf-8", locals: { origin: request_base_url }
   end
 
-  get "/service-worker.js", description: "Service worker", skip: [:authenticate] do
+  def service_worker
+    headers "X-Rack-Defaults" => "unauthenticated"
     text(file_text(:service_worker), content_type: "text/javascript; charset=utf-8")
   end
 end

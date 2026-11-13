@@ -15,9 +15,15 @@ set :rust, :none
 set :trust_forwarded_for, true
 
 # The key the session cookie is signed with (at least 32 bytes). Rails' SECRET_KEY_BASE, though the cookie format
-# is this DSL's own: the token is signed, not Rails' MessageVerifier format (GAPS.md).
+# is Rails 7/8's (format: :rails7): the MessageVerifier envelope Rails' cookie jar writes, so Rails reads the port's cookies.
 setting :secret_key, env: "SECRET_KEY_BASE", secret: true
-cookies secret: :secret_key
+cookies secret: :secret_key, format: :rails7
+
+# Rails' flash (`redirect_to ..., notice:`/`alert:`), carried on the session cookie as a `.<key>` suffix on its token:
+# every message the app can show, by the key a redirect names. The page a redirect lands on reads it with take_flash.
+flash cookie: "_campfire_session",
+      notice: { notice_saved: "✓", notice_avatar: "It may take up to 30 minutes to change everywhere." },
+      alert: { room_not_found: "Room not found or inaccessible" }
 
 # A write from another site answers 403 (Campfire has Rails' CSRF token; this is Fetch Metadata only).
 use_layer :fetch_metadata
@@ -25,9 +31,11 @@ use_layer :fetch_metadata
 # Rails forms send update and delete as a POST with a hidden `_method` field; Rack::MethodOverride routes them as PATCH/DELETE.
 use_layer :method_override
 
-# POST /session is the login action: 10 requests in 3 minutes per client address, then 429, as Rails'
-# `rate_limit to: 10, within: 3.minutes`. `path:` is one exact path, so GET /session/new (the form) stays outside it.
-use_layer :rate_limit, per: 180, burst: 10, path: "/session"
+# Rails routes take an optional `(.:format)`: `/messages/1/boosts.turbo_stream` is the boosts route as a turbo stream.
+use_layer :format_extension
+
+# Rails' params merge the query string under the form body: a button's `?involvement=` reaches a PUT's form fields.
+set :merge_query_params, true
 
 # Rails' default response headers for the HTML pages and fragments (replacing :private_cache, whose
 # `private, no-cache` + `Vary: Cookie` Rails does not send): the security headers, X-Version/X-Rev from the
@@ -46,11 +54,15 @@ use_layer :rack_defaults, security_headers: true, version: :app_version, revisio
 # Rack::Deflater and Thruster in front of Rails: gzip for a client that takes it, `Vary: accept-encoding` after the
 # page's own tokens (`accept, accept-encoding`), and Thruster's cache with its `X-Cache: miss/hit/bypass` (the
 # public max-age assets are what it keeps). Outside :rack_defaults, so the ETag is over the identity body.
-use_layer :front
+use_layer :front, enabled: :front  # FRONT=0: no Thruster, as in Rails' test environment (test/rails_tests)
 
 # views/*.html: the layout, the pages and the partial; the stylesheet is served from public/ under /assets.
 set :views, "views"
 set :layout, :layout
+# turbo-rails: a request with a Turbo-Frame header (a frame's src, a prefetch from inside a frame) is rendered in the
+# turbo_rails/frame layout, the csrf metas and the page.
+set :turbo_frame_layout, :turbo_frame
+
 # MessagesHelper#message_presentation: the last sanitisation layer a text message passes through is auto_link
 # with Rails' default safe-list plus the editor's formatting (ContentFilters::EDITOR_FORMATTING_TAGS and
 # _ATTRIBUTES), so `figure` (the table wrapper) is not listed and unwraps, links get no `rel`, and bare URLs are
@@ -94,12 +106,21 @@ setting :storage, env: "ACTIVE_STORAGE_PATH", default: "storage/files"
 # The size in MB of the whole-response cache of the `cache: :private` routes (AP1); 0 turns it off. `type: :i64`
 # because a setting without a type is text and a numeric default needs the integer type.
 setting :response_cache_mb, env: "CAMPFIRE_RESPONSE_CACHE_MB", default: 64, type: :i64
+# POST /session's `rate_limit to: 10, within: 3.minutes` (controllers/sessions.axum.rb). RATE_LIMIT=0 is Rails' test
+# environment, whose :null_store cache never counts (test/rails_tests).
+setting :rate_limit, env: "RATE_LIMIT", default: 1, type: :i64
+setting :front, env: "FRONT", default: 1, type: :i64
+# 1 orders search results by message id, as the benchmark harness's search contract expects; 0 (the default) is Rails'
+# created_at order, which the parity run compares. Only test/bench_local.rb sets it (models/message.axum.rb, search_messages).
+setting :search_order_by_id, env: "CAMPFIRE_SEARCH_ORDER_BY_ID", default: 0, type: :i64
 # config/initializers/version.rb: the version badge (APP_VERSION, else GIT_REVISION, else "0").
 setting :app_version, env: "APP_VERSION", default: "0"
 # The same initializer's X-Rev header (GIT_REVISION); empty writes no header, as Rails drops a nil one.
 setting :git_revision, env: "GIT_REVISION", default: ""
 # layouts/application.html.erb: the vapid-public-key meta (Rails.configuration.x.vapid.public_key).
 setting :vapid_public_key, env: "VAPID_PUBLIC_KEY", default: ""
+# config.x.vapid's private key: VAPID's signing key for the Web Push sent after a new message (models/push.axum.rb).
+setting :vapid_private_key, env: "VAPID_PRIVATE_KEY", default: "" # not `secret:`, which would make it required
 # The asset mount stays public: the e2e fetches the fingerprinted name with no session. `digest: true` serves
 # only `<stem>-<8 hex digits><ext>`, Propshaft's digest (so the names are Rails' own, and a stylesheet's
 # `url(...)`/`@import` name the digested files), the layout writes that URL with `{{ asset_path "campfire.css" }}`,
@@ -113,6 +134,7 @@ serve_file "/422.html", from: "public/errors/422.html", max_age: 2592000, skip: 
 serve_file "/500.html", from: "public/errors/500.html", max_age: 2592000, skip: [:authenticate, :allow_browser]
 serve_file "/502.html", from: "public/errors/502.html", max_age: 2592000, skip: [:authenticate, :allow_browser]
 file "public/errors/404.html", as: :page_404
+file "public/errors/422.html", as: :page_422
 # Users::AvatarsController sends the default-bot avatar with send_file; the response names this file.
 file "public/default-bot-avatar.svg", as: :default_bot_avatar_file
 # Accounts::LogosController#send_stock_icon sends the stock app icon when the account has no logo.
@@ -126,7 +148,20 @@ file "pwa/service_worker.js", as: :service_worker
 database :sqlite, path: "campfire.sqlite3", env: "DATABASE_PATH"
 migrations "db/migrate"
 
+# Named SQL expressions the relations select (`expr(:name)`, or `expr(:name, :assoc)` for a joined table) are declared in the model
+# that uses them (models/*.axum.rb) or, when several models share one, in a concern (models/concerns/*.axum.rb) the models `include`.
+# `now` and `logo_attached` are left here: neither reads the table of the model that asks for it.
+# The time stamp of a column other than created_at and updated_at (sessions.last_active_at), as `insert` writes those.
+expr :now, type: :string, sql: "strftime('%Y-%m-%d %H:%M:%f', 'now')"
+# Account#logo.attached?: the account has a logo attachment (has_one_attached :logo). Account and User relations both read it, and it
+# names a table of its own rather than the model's `{t}`, so it belongs to neither.
+expr :logo_attached, type: :bool, sql: "EXISTS (SELECT 1 FROM active_storage_attachments WHERE record_type = 'Account' AND name = 'logo')"
+
 # The declarations are split Rails-shaped; use_dsl splices them in here, in declaration order.
+use_dsl "db/tables.axum.rb"                    # table: every table the statements touch, for the models below
+use_dsl "models/concerns/timestamps.axum.rb"   # concern :Timestamps: updated_at_number, created_ms, updated_ms, created_iso, created_iso_ms
+use_dsl "models/concerns/named.axum.rb"        # concern :Named: lower_name
+use_dsl "controllers/concerns/application.axum.rb"  # ApplicationController: the layout locals every view reads
 use_dsl "models/user.axum.rb"             # record :User, active_user_by_email, user_for_session
 use_dsl "models/session.axum.rb"          # start_session, end_session
 use_dsl "models/current.axum.rb"          # current :user, after the session queries it reads
@@ -135,38 +170,68 @@ use_dsl "models/ban.axum.rb"              # banned_ip: Ban.banned? for BlockBann
 # the filter declared first is the innermost and runs last: this file is included before authenticate.axum.rb to put
 # the ban check inside :authenticate, as Rails does (an unauthenticated non-GET still redirects to /session/new,
 # while POST /session, which skips authentication, is still checked).
-use_dsl "controllers/banned_ips.axum.rb"   # before :reject_banned_ip, ApplicationController's BlockBannedRequests
-use_dsl "controllers/authenticate.axum.rb" # before :authenticate: the signed-in filter every controller shares
+use_dsl "controllers/concerns/banned_ips.axum.rb"   # before :reject_banned_ip, ApplicationController's BlockBannedRequests
+use_dsl "controllers/concerns/authenticate.axum.rb" # before :authenticate: the signed-in filter every controller shares
 use_dsl "models/room.axum.rb"             # record :Room, room_for_user, first_room_id, shared/direct rooms
 use_dsl "models/message.axum.rb"          # record :MessageRow, pagination, search, the message writes
 use_dsl "models/bot_api.axum.rb"          # record :BotMessage, :BotBoost, bot_actor and the bot API queries
 use_dsl "models/avatar.axum.rb"           # record :Avatar, the processed variant's blob key
+use_dsl "models/variant.axum.rb"          # Active Storage variants: the digests, the variant record, blob and image
 use_dsl "models/autocomplete.axum.rb"     # record :AutocompleteUser, name-filtered active users
+use_dsl "models/push.axum.rb"             # Room::MessagePusher: who a new message is pushed to
 use_dsl "models/account.axum.rb"          # record :AccountPage, account_page: name, join code, logo version, administrator
 use_dsl "models/sidebar.axum.rb"         # record :SidebarDirect/:SidebarRoom/:SidebarUser/:SidebarFlags, sidebar queries
 use_dsl "models/room_form.axum.rb"        # record :RoomFormUser, :RoomFormRoom, the new/edit form queries
-use_dsl "controllers/platform.axum.rb"   # pwa_browser, pwa_flag, pwa_blocked: ApplicationPlatform and allow_browser, from the User-Agent
+use_dsl "models/active_storage.axum.rb"   # Active Storage blobs: representations, disk blobs, direct uploads
+use_dsl "models/bot.axum.rb"              # bot users, webhooks and bot keys
+use_dsl "models/blob.axum.rb"             # model :Blob, table: :active_storage_blobs: blob_file
+use_dsl "models/attachment.axum.rb"       # model :Attachment, table: :active_storage_attachments: logo and avatar blobs
+use_dsl "models/search_row.axum.rb"       # SearchRow: the model of the message_search_index table (index_message, reindex_message)
+use_dsl "models/rich_text.axum.rb"        # RichText: the model of the action_text_rich_texts table (create_message_body)
+use_dsl "models/first_run.axum.rb"        # FirstRun: the account and its administrator
+use_dsl "models/membership.axum.rb"       # Membership involvement
+use_dsl "models/sidebar_direct_cache.axum.rb" # SidebarDirectCache: the model of the axum_dsl_sidebar_direct_cache table
+use_dsl "models/push_subscription.axum.rb" # Push::Subscription
+use_dsl "models/boost.axum.rb"            # Boost: the model of the boosts table
+use_dsl "models/webhook.axum.rb"          # Webhook: the model of the webhooks table
+use_dsl "models/variant_record.axum.rb"   # VariantRecord: the model of the active_storage_variant_records table
+use_dsl "models/search.axum.rb"           # Search: recent searches
+use_dsl "controllers/concerns/platform.axum.rb"   # pwa_browser, pwa_flag, pwa_blocked: ApplicationPlatform and allow_browser, from the User-Agent
 use_dsl "controllers/params.axum.rb"     # Login, RoomPath, PageParams, SearchParams, NewMessage, AvatarPath
 use_dsl "controllers/sessions.axum.rb"    # GET /session/new, POST/DELETE /session, GET /
 use_dsl "controllers/rooms.axum.rb"       # GET /rooms/:id, its messages page and post
 use_dsl "controllers/users.axum.rb"       # GET /join/:join_code, GET /session/transfers/:id
+use_dsl "controllers/first_runs.axum.rb"  # GET/POST /first_run
 use_dsl "controllers/profiles.axum.rb"    # GET /users/me/profile
 use_dsl "controllers/qr_code.axum.rb"     # GET /qr_code/:id
 use_dsl "controllers/active_storage.axum.rb" # GET /rails/active_storage/representations/redirect/..., /disk/...
 use_dsl "controllers/avatars.axum.rb"     # GET /users/:token/avatar
 use_dsl "controllers/autocomplete.axum.rb" # GET /autocompletable/users(.json)
 use_dsl "controllers/bot_messages.axum.rb" # the bot API: GET/PUT /rooms/:id/:bot_key/messages, POST .../boosts
-use_dsl "controllers/account.axum.rb"      # GET /account/edit, /account/bots, /account/custom_styles/edit
+use_dsl "controllers/concerns/authorization.axum.rb" # ensure_can_administer, account_flags, not_found
+use_dsl "controllers/accounts.axum.rb"     # AccountsController: GET /account/edit, PATCH/PUT /account
+use_dsl "controllers/accounts/bots.axum.rb" # Accounts::BotsController: /account/bots ...
+use_dsl "controllers/accounts/bots/keys.axum.rb" # Accounts::Bots::KeysController: PUT /account/bots/:bot_id/key
+use_dsl "controllers/accounts/users.axum.rb" # Accounts::UsersController: /account/users ...
+use_dsl "controllers/accounts/custom_styles.axum.rb" # Accounts::CustomStylesController
+use_dsl "controllers/accounts/join_codes.axum.rb" # Accounts::JoinCodesController: POST /account/join_code
+use_dsl "controllers/accounts/logos.axum.rb" # Accounts::LogosController: DELETE /account/logo
 use_dsl "controllers/push_subscriptions.axum.rb" # GET /users/me/push_subscriptions
 use_dsl "controllers/sidebars.axum.rb"    # GET /users/me/sidebar
 use_dsl "controllers/searches.axum.rb"    # GET /searches
+use_dsl "controllers/unfurl_links.axum.rb" # POST /unfurl_link
 use_dsl "controllers/room_fragments.axum.rb" # GET /rooms/:id/involvement, /refresh, /messages/:message_id
 use_dsl "controllers/messages.axum.rb"   # GET .../messages/:id/edit, PATCH/DELETE .../messages/:id, /messages/:id/boosts
 use_dsl "controllers/room_forms.axum.rb"    # GET /rooms/{opens,closeds,directs}/new and /:id/edit
+use_dsl "controllers/people.axum.rb"       # POST/DELETE /users/:id/ban, DELETE /users/:id/avatar
 use_dsl "controllers/errors.axum.rb"       # /404.html ... /502.html, the not_found page
 use_dsl "controllers/logos.axum.rb"        # GET /account/logo
 use_dsl "controllers/pwa.axum.rb"          # GET /webmanifest.json, /service-worker.js
 use_dsl "controllers/health.axum.rb"      # GET /up
+use_dsl "routes.axum.rb"                  # the route table: paths -> controller#action
+use_dsl "test/laws/accounts.axum.rb"     # laws over the account controllers (cargo test; test/laws/run.sh)
+use_dsl "test/laws/flash.axum.rb"        # laws over the flash cookie's states and current_user's sign-in redirect
+
 
 # Action Cable (docs/cable.md in ../axum_dsl): the six channels once-campfire's client subscribes to, over
 # actioncable-v1-json. The endpoint authenticates itself from the upgrade request's session cookie

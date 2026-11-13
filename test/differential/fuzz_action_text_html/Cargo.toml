@@ -1,0 +1,8 @@
+[package]
+name = "fuzz_ath"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+scraper = { version = "0.20", features = ["deterministic"] }
+serde_json = "1"

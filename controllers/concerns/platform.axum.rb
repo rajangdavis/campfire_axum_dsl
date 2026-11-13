@@ -103,7 +103,7 @@ fragment do
   # page is 200, titled "Campfire" for Apple Messages link previews (they spoof both the Facebook and Twitter bots).
   # The /up health check, the assets and the public error pages are not controller actions and skip it.
   before :allow_browser do
-    return render(:incompatible_browser, locals: { title: pwa_apple_messages(user_agent) ? "Campfire" : "Unsupported browser", vapid_key: setting(:vapid_public_key), logo_version: (account_page || raise("the account was not read back")).logo_version, signed_in: false, user_id: "", user_name: "", flash_on: false, flash_alert: false, flash_text: "" }) if pwa_blocked(user_agent)
+    return render(:incompatible_browser, locals: { title: pwa_apple_messages(user_agent) ? "Campfire" : "Unsupported browser", logo_version: (account_page || raise("the account was not read back")).logo_version, signed_in: false, user_id: "", user_name: "", flash_on: false, flash_alert: false, flash_text: "" }) if pwa_blocked(user_agent)
     "continue"
   end
 end

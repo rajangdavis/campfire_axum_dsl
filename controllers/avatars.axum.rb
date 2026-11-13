@@ -1,21 +1,25 @@
-fragment do
+controller do
   # Users::AvatarsController#show: a signed_id token names the user. The stored :square variant is served from
   # Active Storage's local Disk service; without one Rails serves the default-bot SVG for a bot and the
   # initials SVG otherwise. The send_file responses are inline (Rails' send_file headers), the initials SVG carries
   # no Content-Disposition; every response has a 30-minute public cache and a one-week
   # stale-while-revalidate, and the weak ETag is Rails' stale?(etag: @user).
-  get "/users/:token/avatar", params: :AvatarPath, description: "A user's processed avatar (Rails signed_id token)" do
+  def show
     user_id = rails_signed_id(params[:token], purpose: "user/avatar", secret: :secret_key)
     return halt(404, "") if user_id.nil?
-    avatar = avatar_variant(user_id: user_id)
     fallback = avatar_fallback(user_id: user_id)
     return halt(404, "") if fallback.nil?
+    # User#avatar_variant: the :square variant (resize_to_limit [512, 512], webp) of a variable avatar, processed on the
+    # first request that asks for it (models/variant.axum.rb).
+    source = avatar_source(user_id: user_id)
+    storage = setting(:storage)
+    avatar_key = processed_variant(source&.key || "", source&.content_type || "", source&.filename || "", "6gwfjNKv9eUy9jNUtEZvQFLU0hQ=", "webp", 512)
     # Rails' stale?(etag: @user) is a weak validator over the user's cache key.
-    tag = avatar.nil? ? "W/\"avatar-user-#{user_id}-#{fallback.version}\"" : "W/\"avatar-#{avatar.key}\""
+    tag = avatar_key == "" ? "W/\"avatar-user-#{user_id}-#{fallback.version}\"" : "W/\"avatar-#{avatar_key}\""
     etag(tag)
     # Users::AvatarsController includes ActiveStorage::Streaming (ActionController::Live): no default headers.
     headers "Cache-Control" => "public, max-age=1800, stale-while-revalidate=604800", "X-Rack-Defaults" => "live"
-    if avatar.nil?
+    if avatar_key == ""
       if fallback.bot
         # send_file like Rails, so the response names default-bot-avatar.svg in its Content-Disposition.
         send_file(file_path(:default_bot_avatar_file), content_type: "image/svg+xml", disposition: :inline)
@@ -63,8 +67,7 @@ fragment do
                locals: { initials: fallback.initials, color: color, long_initials: long_initials }
       end
     else
-      key = avatar.key
-      storage = setting(:storage)
+      key = avatar_key
       first = key[0, 2].to_s
       second = key[2, 2].to_s
       path = "#{storage}/#{first}/#{second}/#{key}"

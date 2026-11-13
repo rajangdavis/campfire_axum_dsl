@@ -1,1 +1,1 @@
-<form data-controller="auto-submit" action="/session/transfers/{{ transfer_id }}" accept-charset="UTF-8" method="post"><input type="hidden" name="_method" value="put">
+{% content_for :body_class %}{{ body_class }}{% endcontent_for %}<form data-controller="auto-submit" action="/session/transfers/{{ transfer_id }}" accept-charset="UTF-8" method="post"><input type="hidden" name="_method" value="put">

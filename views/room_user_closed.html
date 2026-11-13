@@ -1,4 +1,4 @@
-{% args id:, name:, title:, version:, value:, selected:, can_administer:, new_room:, is_current: %}
+{% args id:, name:, title:, version:, value:, selected:, can_administer:, new_room:, current_user_id: %}
 <li class="flex align-center gap margin-none" data-value="{{ value }}">
   <figure class="avatar flex-item-no-shrink" style="--avatar-size: 4ch;">
     {{ partial :room_form_avatar, user_id: id, title: title, version: version }}
@@ -9,7 +9,7 @@
   <hr aria-hidden="true" class="separator">
   {% if can_administer %}
     {% if new_room %}
-      {% if is_current %}
+      {% if id == current_user_id %}
         <input name="user_ids[]" type="hidden" value="{{ id }}">
         <img aria-hidden="true" class="colorize--black flex-item-no-shrink" height="20" src="{{ asset_path "check.svg" }}" width="20">
       {% else %}

@@ -1,0 +1,56 @@
+{% content_for :body_class %}signup{% endcontent_for %}
+<form class="center max-width" enctype="multipart/form-data" action="/first_run" accept-charset="UTF-8" method="post">
+  <section class="nametag u-relative">
+    <div class="flex justify-center align-center pad-block">
+      <img class="nametag__lanyard" aria-hidden="true" src="{{ asset_path "lanyard.svg" }}">
+    </div>
+
+    <div class="nametag__inner flex flex-column gap">
+      <fieldset class="flex flex-column center-block">
+        <legend class="txt-large txt-align-center"><strong>Set up Campfire</strong></legend>
+
+        <label class="align-center center avatar__form gap" data-controller="upload-preview">
+          <div class="btn input--file">
+            <img aria-hidden="true" src="{{ asset_path "camera.svg" }}">
+            <input class="input" accept="image/*" data-upload-preview-target="input" data-action="upload-preview#previewImage" type="file" name="user[avatar]" id="user_avatar">
+            <span class="for-screen-reader">Add your avatar</span>
+          </div>
+
+          <div class="btn avatar input--file txt-xx-large">
+            <img aria-hidden="true" data-upload-preview-target="image" alt="Add your avatar" src="{{ asset_path "default-avatar.svg" }}">
+            <span class="for-screen-reader">Avatar</span>
+          </div>
+        </label>
+      </fieldset>
+
+      <div class="flex align-center gap">
+        {{ partial :translation_button, en: "Enter your name", es: "Introduce tu nombre", fr: "Entrez votre nom", hi: "अपना नाम दर्ज करें", de: "Geben Sie Ihren Namen ein", pt: "Insira seu nome", ja: "お名前を入力してください" }}
+        <label class="flex align-center gap flex-item-grow txt-large input input--actor">
+          <input class="input" autocomplete="name" placeholder="Name" autofocus="autofocus" required="required" data-1p-ignore="true" type="text" name="user[name]" id="user_name">
+          <img aria-hidden="true" width="24" height="24" class="colorize--black" src="{{ asset_path "person.svg" }}">
+        </label>
+      </div>
+
+      <div class="flex align-center gap">
+        {{ partial :translation_button, en: "Enter your email address", es: "Introduce tu correo electrónico", fr: "Entrez votre adresse courriel", hi: "अपना ईमेल पता दर्ज करें", de: "Geben Sie Ihre E-Mail-Adresse ein", pt: "Insira seu endereço de email", ja: "メールアドレスを入力してください" }}
+        <label class="flex align-center gap flex-item-grow txt-large input input--actor">
+          <input class="input" autocomplete="username" placeholder="Email address" required="required" type="email" name="user[email_address]" id="user_email_address">
+          <img aria-hidden="true" width="24" height="24" class="colorize--black" src="{{ asset_path "email.svg" }}">
+        </label>
+      </div>
+
+      <div class="flex align-center gap">
+        {{ partial :translation_button, en: "Enter your password", es: "Introduce tu contraseña", fr: "Saisissez votre mot de passe", hi: "अपना पासवर्ड दर्ज करें", de: "Geben Sie Ihr Passwort ein", pt: "Insira sua senha", ja: "パスワードを入力してください" }}
+        <label class="flex align-center gap flex-item-grow txt-large input input--actor">
+          <input class="input" autocomplete="new-password" placeholder="Password" required="required" maxlength="72" size="72" type="password" name="user[password]" id="user_password">
+          <img aria-hidden="true" width="24" height="24" class="colorize--black" src="{{ asset_path "password.svg" }}">
+        </label>
+      </div>
+
+      <button class="btn btn--reversed center txt-large" type="submit" name="button">
+        <img aria-hidden="true" src="{{ asset_path "arrow-right.svg" }}">
+        <span class="for-screen-reader">Save</span>
+      </button>
+    </div>
+  </section>
+</form>

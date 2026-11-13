@@ -52,6 +52,7 @@
     <link rel="stylesheet" href="{{ asset_path "spinner.css" }}" data-turbo-track="reload">
     <link rel="stylesheet" href="{{ asset_path "trix.css" }}" data-turbo-track="reload">
     <link rel="stylesheet" href="{{ asset_path "utilities.css" }}" data-turbo-track="reload">
+    {% if account_css %}<style data-turbo-track="reload">{{ account_css|raw }}</style>{% endif %}
 
     <script type="importmap" data-turbo-track="reload">{
   "imports": {

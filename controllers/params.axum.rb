@@ -60,9 +60,8 @@ fragment do
     field :room_id, :i64, in: :query, optional: true
   end
 
-  # Accounts::BotsController#edit: the bot id in the path.
+  # Accounts::BotsController#edit and #destroy: the bot id in the path, which `resources :bots` derives (routes.axum.rb).
   params :BotPath do
-    field :id, :i64, in: :path
   end
 
   params :JoinPath do

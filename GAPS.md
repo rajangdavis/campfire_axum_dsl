@@ -89,8 +89,8 @@ Paths are under once-campfire; "workaround" says what this wave did instead.
 - Lacks: a digest in a `static` path or `Cache-Control` computed from the file.
 - Smallest feature: `static "/assets", dir: "public", digest: true` and an `asset_path(:name)` for views.
 - Workaround: a fixed `/assets/campfire.css`.
-- Closed 2026-10-17: `static "/assets", dir: "public", digest: true, skip: [:authenticate]` in `campfire.axum.rb` serves only the fingerprinted name, and `views/layout.html` writes `href="{{ asset_path "campfire.css" }}"`; the name follows the file's bytes, so no digest is written down here. The generated `ServeDir` sends no `Cache-Control` of its own: the fingerprint only makes a far-future header safe, and setting it is the deployment's job (TODO in the raj tree).
-- Closed 2026-10-17: `campfire.axum.rb` declares `use_layer :private_cache, except: ["/assets"]`, so the fingerprint mount no longer carries `private, no-cache`/`Vary: Cookie`; the layer still covers every page. The far-future header itself is still the deployment's job (there is no `cache_control:` keyword yet; TODO in the raj tree).
+- Closed 2026-10-17: `static "/assets", dir: "public", digest: true, skip: [:authenticate]` in `campfire.axum.rb` serves only the fingerprinted name, and `views/layout.html` writes `href="{{ asset_path "campfire.css" }}"`; the name follows the file's bytes, so no digest is written down here. The generated `ServeDir` sends no `Cache-Control` of its own: the fingerprint only makes a far-future header safe, and setting it was left to the deployment. Since closed: `static ... max_age: 2592000` sends Rails' `Cache-Control: max-age=2592000, public`.
+- Closed 2026-10-17: `campfire.axum.rb` declares `use_layer :private_cache, except: ["/assets"]`, so the fingerprint mount no longer carries `private, no-cache`/`Vary: Cookie`; the layer still covers every page. The far-future header is now the `static` mount's `max_age: 2592000` (see above).
 
 ## 13. A form field name that Rails spells with brackets
 - Needs: Campfire's message form posts `message[body]` (and `message[client_message_id]`), so `MessagesController#create`
@@ -111,10 +111,12 @@ Paths are under once-campfire; "workaround" says what this wave did instead.
 
 ## 14. Out of C1/C2 scope, noted for later waves
 The Turbo Stream response landed in C2: `POST /rooms/:id/messages` answers `text/vnd.turbo-stream.html` with an
-`append` into `messages_room_<id>`. The avatar route landed in C3 (`GET /users/:token/avatar`, section 15). Still
-out: `turbo-cable-stream-source`, Action Cable websockets (the harness's `streams`), file attachments beyond the
-avatar variant, bots/webhooks, push, the first-run and account pages. Each is a feature of its own: websockets are
-the big one for the compiler.
+`append` into `messages_room_<id>`. The avatar route landed in C3 (`GET /users/:token/avatar`, section 15). Since then
+the Action Cable endpoint, the account and bot pages, and the bot message API have landed (the parity run of
+2026-11-04 passes every default-seed state on Chromium desktop light and phone dark). Still out, as of 2026-11-04:
+first run (section 21), the write routes behind several of those pages (section 21), Web Push delivery
+(`test_notifications`: VAPID signing and aes128gcm) and link unfurling (`POST /unfurl_link`: an outbound HTTP fetch
+and OpenGraph parsing). The last two need compiler features.
 
 ## 15. Rails signed IDs and a file response computed at request time
 - Needs: `User.from_avatar_token(params[:user_id])` verifies `signed_id(purpose: :avatar)` and serves the stored
@@ -165,11 +167,8 @@ the big one for the compiler.
   `width`/`height` on its `<img>` and no `max-inline-size` box (`views/message_presentation*`, `models/message.axum.rb`
   message_presentation), unlike Rails (moon.jpg: 640x640, `style="width: 320px; aspect-ratio: 1.0;"`). Needs
   `upload.width`/`upload.height` (or an `analyze` that reads PNG/JPEG/GIF/WebP headers).
-- Lacks, variants: the `:thumb` (resize_to_limit 1200x800) a message attachment gets and the `:square` (512x512 webp) an avatar gets.
-  Rails creates them (`Message::Attachment#process_attachment`, `User::Avatar#avatar_variant`), so the representation
-  redirect (`/rails/active_storage/representations/redirect/...`) and `/users/:token/avatar` have a processed blob to send. Here no
-  `active_storage_variant_records` row is written, so the new attachment's representation URL answers 404 and a new avatar still
-  shows the initials. Needs `upload.variant(resize_to_limit:, format:)` writing the variant blob, its attachment and the variant record.
+- Closed 2026-11-07, variants: the `:thumb` (resize_to_limit 1200x800) a message attachment gets and the `:square` (512x512 webp)
+  an avatar gets, through axum_dsl's `image_variant` (models/variant.axum.rb); see the 2026-11-07 entry at the end.
 - Closed 2026-10-29, disconnecting a user's cable connections: `close_remote_connections(user.id, reconnect: true)` (cable.md) is
   Rails' `User#close_remote_connections`: every open socket of that user is sent
   `{"type":"disconnect","reason":"remote","reconnect":true}` and closed, running `on_unsubscribe`. Wired where Rails calls it and
@@ -204,7 +203,7 @@ query uses a placeholder once).
   non-GET is 429 from the ban filter (empty `text/html`, with `rack_defaults` cookies/security headers) and is
   never rate-limited.
 - Where: `app/controllers/concerns/block_banned_requests.rb` and `app/controllers/sessions_controller.rb:3`;
-  candidate `controllers/banned_ips.axum.rb` and `campfire.axum.rb` (`use_layer :rate_limit`).
+  candidate `controllers/concerns/banned_ips.axum.rb` and `campfire.axum.rb` (`use_layer :rate_limit`).
 - Lacks: `:rate_limit` is a router layer, so it always runs outside the controller's `before` filters;
   `before :reject_banned_ip` cannot run first. In the shared full matrix the candidate's tenth-and-later POSTs
   from `{{ips.banned}}` answer from `rate_limit` (`text/plain`, no `Set-Cookie`, no security headers), while the
@@ -226,3 +225,181 @@ query uses a placeholder once).
   `auth/transfer/valid`, and `auth/incompatible_browser` pass; the candidate/reference request count is 263/263.
   Removing `LD_PRELOAD` globally was wrong: it expired signed transfer/join tokens (`SystemTime::now` in
   `signed_id.rb`), which `auth/transfer/valid` and `auth/join/completed` caught.
+
+
+## 21. First run and the write routes behind existing pages
+- Needs: every form the pages render must reach a route. The parity server layer passes (the HTML matches Rails), but
+  parity states are mostly page renders, so a form whose target route is missing still passes. Found 2026-11-04 by
+  `test/write_routes.py`, which replays every form action, `_method` and `data-turbo-method` link in a parity run's
+  Rails captures against Rails and the candidate on the default seed (18 missing on that seed), and by
+  `once-campfire-verification`'s `bin/browser`, which stops at its first step.
+- Missing (Rails answers; the candidate 404s or 405s): `GET`/`POST /first_run` (and `/session/new`'s redirect to it
+  when there is no account); `POST /rooms/closeds`, `POST /rooms/directs`, `PATCH /rooms/opens/:id`,
+  `DELETE /rooms/directs/:id`; `PUT /account.:id` (the restrict-room-creation toggle), `PATCH /account/custom_styles`,
+  `PATCH`/`DELETE /account/users/:id`, `POST /account/join_code`; `POST /account/bots`, `PATCH`/`DELETE
+  /account/bots/:id`, `PUT /account/bots/:id/key`; `POST`/`DELETE /users/:id/ban`, `DELETE /users/:id/avatar`;
+  `POST /users/me/push_subscriptions`, `DELETE /users/me/push_subscriptions/:id`; `DELETE /searches/clear`;
+  `POST /unfurl_link` (section 14).
+- Also (fixed 2026-11-06, below): `PATCH /account.:id` from the logo form with no file chosen (Rails answers 400 for
+  the missing `account` parameter), and `GET /account/bots/:id/edit` for an unknown bot (now 404). With the account's
+  `restrict_room_creation_to_administrators` setting on, `GET /rooms/opens/new` as a member answers 200 where Rails
+  answers 403 (parity `rooms/opens/new/restricted_member`, seed `restricted`).
+- Rendering, from the parity states on the non-default seeds (2026-11-04, Chromium desktop light; `candidate compare
+  --seed default` skips them): the layout never emits the account's custom CSS (`<style data-turbo-track="reload">`,
+  8 `custom_styles` states); `<body>` lacks `account-has-logo` on the sign-in page and the member's account page, and
+  the remove-logo button posts to `/account/logo` without Rails' `?v=<version>`; the account member list does not
+  paginate (no lazy `next_page_container` frame, and `GET /account/users.turbo_stream?page=N` is a 404; 3 `crowd`
+  states).
+- Lacks: nothing in the compiler for most of them; existing routes are the templates (`POST /join/:join_code` for
+  first run, `POST /rooms/opens` and `PATCH /rooms/closeds/:id` for the room forms, `PATCH /account.:id` and
+  `PATCH /users/me/profile` for the rest).
+- Done when: `test/write_routes.py` reports 0 missing, `bin/browser` passes unmodified against a fresh image, and the
+  `first_run`, `crowd`, `custom_styles` and `restricted` seeds' parity states pass.
+- Progress (2026-11-05): `GET`/`POST /first_run` and `GET /session/new`'s redirect to `/first_run` on an install with
+  no users (`controllers/first_runs.axum.rb`, `views/first_run.html`). Against Rails on the `first_run` seed, the
+  form's DOM is identical; the POST's rows (account, administrator, All Talk, its one membership, the session, an
+  avatar blob) match apart from the bcrypt prefix (`$2b$` here, `$2a$` in Rails, as `POST /join` already does) and
+  the avatar blob's `metadata`, which Rails' analyze job later fills with width and height. With no account the
+  layout's icon links carry no `?v=`, so the page renders through `views/layout_no_account.html`.
+- Compiler (fixed in axum_dsl, `Body#transaction_captures`): a local a `transaction` block read was moved into the
+  `move` closure, so reading it after the block was E0382; each captured local is now cloned first, and `POST /join`
+  no longer copies its session token.
+- Progress (2026-11-05): `POST /rooms/closeds`, `POST /rooms/directs`, `DELETE /rooms/directs/:id` and
+  `PATCH /rooms/opens/:id`. 18 differential scenarios against Rails (fresh default/restricted seeds; status, Location,
+  every table row, and the sidebar frame and room pages after) all pass, including restricted creation (403), a
+  found ping reused, a member's own closed room, a direct room through the opens form (redirect with the alert) and
+  a closed room opened (every active user granted). `/` with no room now shows the alert a redirect carried (it was
+  dropped). The cable broadcasts these send are not compared here.
+- Progress (2026-11-05): Account -- `PATCH /account/custom_styles`, `POST /account/join_code`, `DELETE /account/logo`,
+  `GET /account/users.turbo_stream?page=N` (and the edit page's lazy `next_page_container` past 500 people),
+  `PATCH`/`DELETE /account/users/:id`. 20 differential scenarios pass (default, custom_styles and crowd seeds; member
+  403s, inactive/banned 404s, a bogus role, a page past the end). Found by them and fixed: every account save writes
+  has_json's default `settings` when NULL (the rename did not); the role form's duplicate `user[role]` was a 422 (the
+  last value wins in Rails); the layout now writes the account's custom CSS (`<style data-turbo-track="reload">`, an
+  empty string included), closing the `custom_styles` rendering gap. The logo's purge runs in the request, where Rails
+  enqueues it (the rows match once the job has run; the files stay on disk).
+- Compiler (fixed in axum_dsl): a ternary passed to a query or helper kept its parens (unused_parens under
+  -Dwarnings); a local named like a params field hid it from later `params[:x]` reads, which rustc reported as a type
+  error in generated code -- such a read is now refused with the DSL line (a plain `x = params[:x]` rebind is allowed).
+- Progress (2026-11-05): Bots -- `POST /account/bots`, `PATCH`/`DELETE /account/bots/:id`, `PUT /account/bots/:id/key`;
+  the bots pages now answer a member 403 (ensure_can_administer) and an unknown bot's edit page 404 (was 500). Bot API --
+  `POST /rooms/:id/:bot_key/messages`, `DELETE .../messages/:id`, `DELETE .../messages/:id/boosts/:id`. 29 differential
+  scenarios pass (bad and inactive keys, non-member rooms, blank bodies, someone else's message or boost).
+- Fixed in the composer's `POST /rooms/:id/messages` (found by the bot API's control scenario): Room#receive now marks
+  the other visible, disconnected members' memberships unread (the sidebar's unread badges); the room is touched
+  (`belongs_to :room, touch: true`); the FTS row holds the body's plain text, not its HTML.
+- Not reproduced: a webhook's attachment reply. (A bot's `POST .../boosts`
+  now broadcasts its boost, as the composer's does.) Rails' fragment cache keeps a message's broadcast render (whose copy
+  link has no port) for the page; on a default port the two agree.
+- Progress (2026-11-06): the last five -- `POST /users/me/push_subscriptions` (an existing subscription touched, a new
+  one created with the request's User-Agent, Push::Subscription's endpoint rules: https, port 443, a permitted push
+  service host or its subdomain), `DELETE /users/me/push_subscriptions/:id`, `POST .../:id/test_notifications`,
+  `DELETE /searches/clear` and `POST /unfurl_link`. Push and search: 11 of 13 differential scenarios pass; the two
+  that differ depend on the network, not the code: Rails resolves a push host and refuses one that does not resolve
+  (`eu.notify.windows.com` here), which the port does not look up, and Rails' test notification delivers Web Push
+  (the seed's keys are fake, so it answers 500), which the port does not send -- it answers the redirect Rails gives
+  after a delivery. Unfurl: `opengraph_unfurl(url)`, a new axum_dsl builtin (`set :rust, :none` stays: the app has no
+  Rust of its own); 19 of 19 against Rails on live URLs (GitHub, YouTube, rubyonrails.org, a tweet through
+  fxtwitter, pages without og: tags, http, media URLs, loopback, private, IPv6 loopback, unresolvable and malformed
+  URLs, a missing `url`), including Rails' dropping of non-ASCII characters on a page that declares no charset. Live
+  pages change, so a rerun can differ when a site does.
+- Progress (2026-11-06): a page sweep (`test/differential/scenarios/pages.py`: 24 signed-in pages as an administrator
+  and as a member, 6 signed-out ones, on the default, custom_styles, restricted and crowd seeds) now passes all 12
+  viewer runs. It found and fixed: `account-has-logo` on the involvement, boosts and signed-out pages (sign in, join,
+  session transfer), and no leading space in a member's body class; the custom-styles editor and, with room creation
+  restricted, the new open and closed room forms answer a member 403; the remove-logo form posts to `?v=`; a boosts
+  page for an unreachable message is the 404 page (that route no longer takes `cache: :private`, which cannot hold a
+  file's text); an unknown path is a 404 for a signed-out visitor too (`not_found skip: [:authenticate]`, a new
+  axum_dsl option: Rails routes before any filter); search results are in creation order, as `.ordered` sorts them.
+  `PATCH`/`PUT /account.:id` now take the logo upload and the restrict-room-creation switch beside the name (7
+  differential scenarios pass), and every avatar or logo blob carries the analyzed metadata Rails' AnalyzeJob writes.
+- Closed 2026-11-07: a newly uploaded account logo's 512/192 PNG variants are made by the first `GET /account/logo` of
+  each size, as Rails' `logo_variant(size).processed` makes them (see the 2026-11-07 entry at the end). (Fixed in axum_dsl: narrowing an upload with `if x.nil? ... else x.store(...)
+  end` moved it, so a later `x.nil?` was E0382; the match now clones the upload when the body reads it again.)
+- Progress (2026-11-06): Web Push. A new message (the composer's and a bot's) now does Room#receive's push_later after
+  the answer, in a `later do ... end` block (a new axum_dsl form: a spawned task): Room::MessagePusher's recipients
+  (models/push.axum.rb), each sent with `web_push(...)` (a new axum_dsl builtin: RFC 8291 aes128gcm with VAPID, pinned
+  to a public address), and a subscription the push service refuses (404, 410) or whose key is not a P-256 point is
+  deleted, as WebPush::Pool's invalid-subscription handler does. Found by the bot API's differential runs once
+  Rails' push job ran before the rows were compared (the seed's subscriptions have fake keys: Rails deletes them);
+  they now settle and match. `VAPID_PRIVATE_KEY` is a plain setting (a `secret:` one would be required to start).
+  `GET /users/me/sidebar` outside a Turbo frame now writes the layout's body classes (views/sidebar_page.html).
+- Progress (2026-11-06): bot webhooks. A new message (the composer's and a bot's) now runs deliver_webhooks_to_bots
+  after the answer: each eligible bot's payload (Webhook#payload: user, room -- `name: null` for a ping -- and message,
+  with the recipient's mention removed from the plain text) goes to its webhook with `webhook_post` (a new axum_dsl
+  builtin: seven-second timeouts, no proxy), and a text/plain or text/html reply, or the timeout notice, is posted
+  back by the bot, broadcast with the renderer's `http://example.org` (a job has no request) and pushed. Checked with
+  `test/differential/scenarios/webhooks.py` against a local receiver (`webhook_receiver.py`): the payloads match
+  byte for byte in key order (`webhooks_compare.py`), and the reply rows and pages match, for a text reply, an HTML
+  reply, no reply and a timeout. axum_dsl's `json_object` now writes nil as null and keeps its keys in order
+  (serde_json's `preserve_order`), as Ruby's to_json does; it sorted them. An attachment reply (a known MIME type
+  that is not text) is not reproduced. The differential client now sends Turbo's `Accept` (a turbo stream first) on
+  its form submissions, as the browser does: MessagesController#create answers an HTML-only one 406.
+- Closed (2026-11-06): a Turbo-frame response's head now writes Rails' frame layout's `csrf_meta_tags` (views/turbo_frame.html,
+  an empty token as the full layout's); the differential checker compares those metas (token masked) instead of dropping them.
+- Progress (2026-11-06): a bot's multipart `attachment` post (curl -F) is the message: the blob, its attachment and the
+  filename as the plain text, through axum_dsl's new `request_upload(:attachment)`; a multipart body with no file part is a
+  raw body, as Rails' is. Rails' message body is what Action Text stores, not the raw text: a raw bot body, a bot's `PUT`
+  and a webhook's reply now go through `action_text_html` (stripped, HTML5-parsed and serialized: `&amp;`, CRLF to LF),
+  which was a gap for every bot post with markup, `&` or surrounding whitespace. Its fuzz run against
+  `ActionText::Content.new(html).to_html` (`test/differential/fuzz_action_text_html/run.sh`) matches 4,600 of 4,600 random
+  bodies; scraper's `deterministic` feature (attributes in source order, as Nokogiri keeps them) was the last difference.
+  The attachment's `:thumb` variant is made since 2026-11-07, as for the composer's file post.
+- Closed (2026-11-06, browser matrix): `head :forbidden` is axum_dsl's new `head(403)` at all 29 sites: an empty `text/html`
+  response that still refreshes the session cookies (`halt(403, "")` sent text/plain and none).
+  `/account/users?format=turbo_stream` (and a turbo-stream Accept) answers the page, another format 406, through the new
+  `turbo_stream_request?`; the stream's whitespace now matches Rails byte for byte. Before the first run, `/account/logo`
+  sends no ETag (`stale?(etag: nil)`; an empty `etag("")` writes none) and `/webmanifest.json` answers Rails' "Campfire"
+  manifest instead of a 500. The lean matrix passes on all five seeds (956 cells); the full matrix passes on the four
+  small seeds (486 cells); the differential regression matches 127 of 130 (the bot attachment's variant and two push
+  cases that need DNS or real Web Push delivery).
+- Closed (2026-11-07, image variants): axum_dsl's `image_variant(path, filename, w, h)` runs ImageProcessing::Vips's
+  resize_to_limit on libvips (opened at run time; the image installs the reference's `libvips42t64`), and
+  models/variant.axum.rb writes what Active Storage writes: the variant record under the variation's digest, the
+  analyzed variant blob ("<base>.<format>") and its `image` attachment. The composer's and a bot's attachment get the
+  `:thumb` in the post (Message#process_attachment), the logo's `:large`/`:small` and the avatar's `:square` on the first
+  GET (`logo_variant`, `avatar_variant`); the borrowed-twin fallbacks are gone from the avatar and logo routes.
+  `test/differential/fuzz_image_variant` matches 1,300 of 1,300 random images byte for byte, and the 7 scenarios in
+  `scenarios/variants.py` (run with `CANDIDATE_DOCKER=1`, the image's libvips) match rows, checksums and bytes.
+  Uploads are now identified as Active Storage identifies them (Marcel 1.1's whole tables, so a JPEG sent as
+  application/octet-stream is image/jpeg) and analyzed with the EXIF orientation swap and TIFF/SVG sizes:
+  `test/differential/fuzz_identify` matches 3,000 of 3,000. Still not reproduced: previews (a video's or PDF's `:thumb`
+  needs ffmpeg or poppler), and a conditional GET of a logo or avatar whose variant does not exist yet makes it before
+  answering 304, where Rails' `stale?` answers 304 without processing.
+- Closed (2026-11-07, Rails' controller tests): `test/rails_tests/run.sh` runs the reference's 185 controller tests with
+  their requests answered by the port (a Rack proxy as the integration app, on the tests' own database); 157 pass. What
+  they found and what is now fixed: `update` answers PUT and PATCH (axum_dsl's `also: [:put]`); Rails' optional
+  `(.:format)` (`use_layer :format_extension`, so `/boosts/5.turbo_stream` and `/account.873240054` route as Rails
+  routes them; the Active Storage filenames are `*filename` globs); query params merge under the form body
+  (`set :merge_query_params`); `GET /rooms`, the closed/open room `show` redirects; a signed-in user is redirected away
+  from the join page; a `?bot_key=` on a regular page is 403 (`deny_bots`; axum_dsl's `request_query`); sign-out
+  redirects to `/` and removes the device's push subscription; a blank unfurl URL is 400; autocomplete escapes names
+  and 404s a room the user is not in; the bot API sends no empty Link header (a nil-able computed header is left off);
+  and the signed cookies are Rails 7/8's format (`format: :rails7`), so Rails reads the port's session cookie. Still
+  failing: assertions on in-process broadcasts, jobs, mocks, raised exceptions and HTTP/DNS stubs (about 23), and
+  Active Storage's direct uploads (3), since implemented (below).
+- Closed (2026-11-08): the PWA manifest, service worker and QR code (Rails' `allow_unauthenticated_access`) no longer
+  write the session cookie back (axum_dsl's `X-Rack-Defaults: unauthenticated` marker), as the WebKit browser matrix
+  showed. Active Storage's direct-upload endpoints answer an anonymous caller 401 (ActiveStorageAuthentication).
+  A signed-in direct upload was reproduced later (below). Rails'
+  controller tests: 158 of 185 pass; the differential regression is still 145 of 147 after the cookie format change.
+- Rails' controller tests (2026-11-08): 173 of 185, with the port's broadcasts replayed into Rails' test pubsub
+  (axum_dsl's `AXUM_DSL_CABLE_LOG`). The 12 left are listed in test/rails_tests/README.md.
+- Closed (2026-11-08), the default-seed browser sample (Firefox and WebKit, light; 1,500 of 1,500 cells):
+  - The service worker gets Rails' ETag and `max-age=0, private, must-revalidate`; axum_dsl's rack defaults now tag
+    text/javascript, as Rack::ETag does.
+  - MessagesController's `layout false, only: :index` keeps the application layout for Turbo-Frame requests to show,
+    edit and room-not-found (axum_dsl's `render ..., frame_layout: false`).
+  - The user page and profile point their back link at the Referer, as Rails' `link_back` does (axum_dsl's
+    `request_referrer`), which WebKit's touch prefetch exposed.
+- Closed (2026-11-08): Active Storage direct uploads for a signed-in caller. POST /rails/active_storage/direct_uploads
+  creates the blob and answers Rails' JSON (the blob's attributes, `signed_id`, and `direct_upload` with the signed
+  `blob_token` URL and its Content-Type header); PUT /rails/active_storage/disk/:token is DiskController#update (204;
+  404 for a bad or expired token; 422 for a Content-Type, Content-Length or MD5 mismatch). axum_dsl gained
+  `active_storage_key`, `active_storage_direct_upload_url`, `active_storage_disk_upload` and a body
+  `active_storage_blob_id`. Checked against Rails: its verifier accepts the port's token and `signed_id`, the port
+  accepts a Rails-made upload URL, and Rails' controller tests are 175 of 185 (the 10 left need in-process hooks).
+- Closed (2026-11-08): POST /session's rate limit runs after the ban filter, as Rails' callbacks do (ApplicationController's
+  reject_banned_ip, then SessionsController's rate_limit), so a banned request is answered 429 uncounted; past 10 in
+  3 minutes the answer is render_rejection's sign-in page with a 429. It was a router layer counting every POST, which
+  the full matrix at 6 workers showed (auth/sign_in/banned_ip). axum_dsl's `rate_limited?("name", to:, within:)`.

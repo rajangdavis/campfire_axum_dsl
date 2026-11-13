@@ -29,9 +29,9 @@
         {% endif %}
         {% if search %}<input autocomplete="off" autocorrect="off" class="input input--transparent full-width" data-1p-ignore="true" data-action="input->filter#filter" id="search" placeholder="Filter…" type="search">{% endif %}
         <div contents data-filter-target="list">
-          {% for user in selected_users %}{{ partial :room_user_closed, id: user.id, name: user.name, title: user.title, version: user.version, value: user.value, selected: true, can_administer: can_administer, new_room: new_room, is_current: user.is_current }}{% endfor %}
+          {% for user in selected_users %}{{ partial :room_user_closed, id: user.id, name: user.name, title: user.title, version: user.version, value: user.value, selected: true, can_administer: can_administer, new_room: new_room, current_user_id: user_id }}{% endfor %}
           {% if has_selected_and_unselected %}<hr class="separator full-width" style="--border-style: solid">{% endif %}
-          {% for user in unselected_users %}{{ partial :room_user_closed, id: user.id, name: user.name, title: user.title, version: user.version, value: user.value, selected: false, can_administer: can_administer, new_room: new_room, is_current: user.is_current }}{% endfor %}
+          {% for user in unselected_users %}{{ partial :room_user_closed, id: user.id, name: user.name, title: user.title, version: user.version, value: user.value, selected: false, can_administer: can_administer, new_room: new_room, current_user_id: user_id }}{% endfor %}
         </div>
       </menu>
     </section>

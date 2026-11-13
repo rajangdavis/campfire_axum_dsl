@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{ title }}</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, interactive-widget=resizes-content">
+    <meta name="view-transition" content="same-origin">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="csrf-param" content="authenticity_token">
+    <meta name="csrf-token" content="">
+    {% if signed_in %}<meta name="current-user-id" content="{{ user_id }}"><meta name="current-user-name" content="{{ user_name }}">{% endif %}
+    <meta name="action-cable-url" content="/cable">
+
+    <meta name="vapid-public-key" content="{{ vapid_key }}">
+    <meta name="turbo-prefetch" content="true">
+
+    <link rel="manifest" href="/webmanifest.json">
+    <link rel="icon" href="/account/logo" type="image/png">
+    <link rel="apple-touch-icon" href="/account/logo">
+
+    <link rel="stylesheet" href="{{ asset_path "_reset.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "actiontext.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "animation.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "autocomplete.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "avatars.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "base.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "boosts.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "buttons.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "code.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "colorize.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "colors.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "composer.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "embeds.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "filters.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "flash.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "inputs.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "layout.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "lexxy-content.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "lexxy-editor.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "lexxy-variables.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "lexxy.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "lightbox.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "messages.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "nav.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "panels.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "separators.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "sidebar.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "signup.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "spinner.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "trix.css" }}" data-turbo-track="reload">
+    <link rel="stylesheet" href="{{ asset_path "utilities.css" }}" data-turbo-track="reload">
+    {% if account_css %}<style data-turbo-track="reload">{{ account_css|raw }}</style>{% endif %}
+
+    <script type="importmap" data-turbo-track="reload">{
+  "imports": {
+    "application": "{{ asset_path "application.js" }}",
+    "@hotwired/stimulus": "{{ asset_path "stimulus.min.js" }}",
+    "@hotwired/stimulus-loading": "{{ asset_path "stimulus-loading.js" }}",
+    "@hotwired/turbo-rails": "{{ asset_path "turbo.js" }}",
+    "@rails/actioncable": "{{ asset_path "actioncable.esm.js" }}",
+    "@rails/request.js": "{{ asset_path "@rails--request.js" }}",
+    "lexxy": "{{ asset_path "lexxy.js" }}",
+    "highlight.js": "{{ asset_path "highlight.js/core.js" }}",
+    "initializers/autocomplete": "{{ asset_path "initializers/autocomplete.js" }}",
+    "initializers/current": "{{ asset_path "initializers/current.js" }}",
+    "initializers/highlight": "{{ asset_path "initializers/highlight.js" }}",
+    "initializers": "{{ asset_path "initializers/index.js" }}",
+    "initializers/rich_text": "{{ asset_path "initializers/rich_text.js" }}",
+    "lib/autocomplete/autocomplete_handler": "{{ asset_path "lib/autocomplete/autocomplete_handler.js" }}",
+    "lib/autocomplete/base_autocomplete_handler": "{{ asset_path "lib/autocomplete/base_autocomplete_handler.js" }}",
+    "lib/autocomplete/collection": "{{ asset_path "lib/autocomplete/collection.js" }}",
+    "lib/autocomplete/constants": "{{ asset_path "lib/autocomplete/constants.js" }}",
+    "lib/autocomplete/custom_elements/suggestion_option": "{{ asset_path "lib/autocomplete/custom_elements/suggestion_option.js" }}",
+    "lib/autocomplete/custom_elements/suggestion_select": "{{ asset_path "lib/autocomplete/custom_elements/suggestion_select.js" }}",
+    "lib/autocomplete/helpers": "{{ asset_path "lib/autocomplete/helpers.js" }}",
+    "lib/autocomplete/renderer": "{{ asset_path "lib/autocomplete/renderer.js" }}",
+    "lib/autocomplete/selection": "{{ asset_path "lib/autocomplete/selection.js" }}",
+    "lib/autocomplete/suggestion_context": "{{ asset_path "lib/autocomplete/suggestion_context.js" }}",
+    "lib/autocomplete/suggestion_controller": "{{ asset_path "lib/autocomplete/suggestion_controller.js" }}",
+    "lib/autocomplete/suggestion_results_controller": "{{ asset_path "lib/autocomplete/suggestion_results_controller.js" }}",
+    "lib/autocomplete/utils": "{{ asset_path "lib/autocomplete/utils.js" }}",
+    "lib/cookie": "{{ asset_path "lib/cookie.js" }}",
+    "lib/rich_text/campfire_extension": "{{ asset_path "lib/rich_text/campfire_extension.js" }}",
+    "lib/rich_text/cite_node": "{{ asset_path "lib/rich_text/cite_node.js" }}",
+    "controllers/application": "{{ asset_path "controllers/application.js" }}",
+    "controllers/auto_submit_controller": "{{ asset_path "controllers/auto_submit_controller.js" }}",
+    "controllers/autocomplete_controller": "{{ asset_path "controllers/autocomplete_controller.js" }}",
+    "controllers/badge_dot_controller": "{{ asset_path "controllers/badge_dot_controller.js" }}",
+    "controllers/boost_delete_controller": "{{ asset_path "controllers/boost_delete_controller.js" }}",
+    "controllers/composer_controller": "{{ asset_path "controllers/composer_controller.js" }}",
+    "controllers/copy_to_clipboard_controller": "{{ asset_path "controllers/copy_to_clipboard_controller.js" }}",
+    "controllers/drop_target_controller": "{{ asset_path "controllers/drop_target_controller.js" }}",
+    "controllers/element_removal_controller": "{{ asset_path "controllers/element_removal_controller.js" }}",
+    "controllers/filter_controller": "{{ asset_path "controllers/filter_controller.js" }}",
+    "controllers/form_controller": "{{ asset_path "controllers/form_controller.js" }}",
+    "controllers": "{{ asset_path "controllers/index.js" }}",
+    "controllers/lightbox_controller": "{{ asset_path "controllers/lightbox_controller.js" }}",
+    "controllers/local_time_controller": "{{ asset_path "controllers/local_time_controller.js" }}",
+    "controllers/maintain_scroll_controller": "{{ asset_path "controllers/maintain_scroll_controller.js" }}",
+    "controllers/messages_controller": "{{ asset_path "controllers/messages_controller.js" }}",
+    "controllers/notifications_controller": "{{ asset_path "controllers/notifications_controller.js" }}",
+    "controllers/popup_controller": "{{ asset_path "controllers/popup_controller.js" }}",
+    "controllers/presence_controller": "{{ asset_path "controllers/presence_controller.js" }}",
+    "controllers/pwa_install_controller": "{{ asset_path "controllers/pwa_install_controller.js" }}",
+    "controllers/read_rooms_controller": "{{ asset_path "controllers/read_rooms_controller.js" }}",
+    "controllers/refresh_room_controller": "{{ asset_path "controllers/refresh_room_controller.js" }}",
+    "controllers/reply_controller": "{{ asset_path "controllers/reply_controller.js" }}",
+    "controllers/rooms_list_controller": "{{ asset_path "controllers/rooms_list_controller.js" }}",
+    "controllers/scroll_into_view_controller": "{{ asset_path "controllers/scroll_into_view_controller.js" }}",
+    "controllers/search_results_controller": "{{ asset_path "controllers/search_results_controller.js" }}",
+    "controllers/sessions_controller": "{{ asset_path "controllers/sessions_controller.js" }}",
+    "controllers/soft_keyboard_controller": "{{ asset_path "controllers/soft_keyboard_controller.js" }}",
+    "controllers/sorted_list_controller": "{{ asset_path "controllers/sorted_list_controller.js" }}",
+    "controllers/sound_controller": "{{ asset_path "controllers/sound_controller.js" }}",
+    "controllers/toggle_class_controller": "{{ asset_path "controllers/toggle_class_controller.js" }}",
+    "controllers/turbo_frame_controller": "{{ asset_path "controllers/turbo_frame_controller.js" }}",
+    "controllers/turbo_streaming_controller": "{{ asset_path "controllers/turbo_streaming_controller.js" }}",
+    "controllers/typing_notifications_controller": "{{ asset_path "controllers/typing_notifications_controller.js" }}",
+    "controllers/unfurl_controller": "{{ asset_path "controllers/unfurl_controller.js" }}",
+    "controllers/upload_preview_controller": "{{ asset_path "controllers/upload_preview_controller.js" }}",
+    "controllers/web_share_controller": "{{ asset_path "controllers/web_share_controller.js" }}",
+    "helpers/dom_helpers": "{{ asset_path "helpers/dom_helpers.js" }}",
+    "helpers/navigator_helpers": "{{ asset_path "helpers/navigator_helpers.js" }}",
+    "helpers/string_helpers": "{{ asset_path "helpers/string_helpers.js" }}",
+    "helpers/timing_helpers": "{{ asset_path "helpers/timing_helpers.js" }}",
+    "helpers/turbo_helpers": "{{ asset_path "helpers/turbo_helpers.js" }}",
+    "models/client_message": "{{ asset_path "models/client_message.js" }}",
+    "models/file_uploader": "{{ asset_path "models/file_uploader.js" }}",
+    "models/message_formatter": "{{ asset_path "models/message_formatter.js" }}",
+    "models/message_paginator": "{{ asset_path "models/message_paginator.js" }}",
+    "models/scroll_manager": "{{ asset_path "models/scroll_manager.js" }}",
+    "models/typing_tracker": "{{ asset_path "models/typing_tracker.js" }}",
+    "languages/bash": "{{ asset_path "languages/bash.js" }}",
+    "languages/css": "{{ asset_path "languages/css.js" }}",
+    "languages/diff": "{{ asset_path "languages/diff.js" }}",
+    "languages/go": "{{ asset_path "languages/go.js" }}",
+    "languages/java": "{{ asset_path "languages/java.js" }}",
+    "languages/javascript": "{{ asset_path "languages/javascript.js" }}",
+    "languages/json": "{{ asset_path "languages/json.js" }}",
+    "languages/python": "{{ asset_path "languages/python.js" }}",
+    "languages/ruby": "{{ asset_path "languages/ruby.js" }}",
+    "languages/rust": "{{ asset_path "languages/rust.js" }}",
+    "languages/sql": "{{ asset_path "languages/sql.js" }}",
+    "languages/xml": "{{ asset_path "languages/xml.js" }}"
+  }
+}</script>
+<link rel="modulepreload" href="{{ asset_path "application.js" }}">
+<link rel="modulepreload" href="{{ asset_path "stimulus.min.js" }}">
+<link rel="modulepreload" href="{{ asset_path "stimulus-loading.js" }}">
+<link rel="modulepreload" href="{{ asset_path "turbo.js" }}">
+<link rel="modulepreload" href="{{ asset_path "actioncable.esm.js" }}">
+<link rel="modulepreload" href="{{ asset_path "@rails--request.js" }}">
+<link rel="modulepreload" href="{{ asset_path "lexxy.js" }}">
+<link rel="modulepreload" href="{{ asset_path "highlight.js/core.js" }}">
+<link rel="modulepreload" href="{{ asset_path "initializers/autocomplete.js" }}">
+<link rel="modulepreload" href="{{ asset_path "initializers/current.js" }}">
+<link rel="modulepreload" href="{{ asset_path "initializers/highlight.js" }}">
+<link rel="modulepreload" href="{{ asset_path "initializers/index.js" }}">
+<link rel="modulepreload" href="{{ asset_path "initializers/rich_text.js" }}">
+<link rel="modulepreload" href="{{ asset_path "lib/autocomplete/autocomplete_handler.js" }}">
+<link rel="modulepreload" href="{{ asset_path "lib/autocomplete/base_autocomplete_handler.js" }}">
+<link rel="modulepreload" href="{{ asset_path "lib/autocomplete/collection.js" }}">
+<link rel="modulepreload" href="{{ asset_path "lib/autocomplete/constants.js" }}">
+<link rel="modulepreload" href="{{ asset_path "lib/autocomplete/custom_elements/suggestion_option.js" }}">
+<link rel="modulepreload" href="{{ asset_path "lib/autocomplete/custom_elements/suggestion_select.js" }}">
+<link rel="modulepreload" href="{{ asset_path "lib/autocomplete/helpers.js" }}">
+<link rel="modulepreload" href="{{ asset_path "lib/autocomplete/renderer.js" }}">
+<link rel="modulepreload" href="{{ asset_path "lib/autocomplete/selection.js" }}">
+<link rel="modulepreload" href="{{ asset_path "lib/autocomplete/suggestion_context.js" }}">
+<link rel="modulepreload" href="{{ asset_path "lib/autocomplete/suggestion_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "lib/autocomplete/suggestion_results_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "lib/autocomplete/utils.js" }}">
+<link rel="modulepreload" href="{{ asset_path "lib/cookie.js" }}">
+<link rel="modulepreload" href="{{ asset_path "lib/rich_text/campfire_extension.js" }}">
+<link rel="modulepreload" href="{{ asset_path "lib/rich_text/cite_node.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/application.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/auto_submit_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/autocomplete_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/badge_dot_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/boost_delete_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/composer_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/copy_to_clipboard_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/drop_target_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/element_removal_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/filter_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/form_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/index.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/lightbox_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/local_time_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/maintain_scroll_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/messages_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/notifications_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/popup_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/presence_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/pwa_install_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/read_rooms_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/refresh_room_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/reply_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/rooms_list_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/scroll_into_view_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/search_results_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/sessions_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/soft_keyboard_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/sorted_list_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/sound_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/toggle_class_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/turbo_frame_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/turbo_streaming_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/typing_notifications_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/unfurl_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/upload_preview_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "controllers/web_share_controller.js" }}">
+<link rel="modulepreload" href="{{ asset_path "helpers/dom_helpers.js" }}">
+<link rel="modulepreload" href="{{ asset_path "helpers/navigator_helpers.js" }}">
+<link rel="modulepreload" href="{{ asset_path "helpers/string_helpers.js" }}">
+<link rel="modulepreload" href="{{ asset_path "helpers/timing_helpers.js" }}">
+<link rel="modulepreload" href="{{ asset_path "helpers/turbo_helpers.js" }}">
+<link rel="modulepreload" href="{{ asset_path "models/client_message.js" }}">
+<link rel="modulepreload" href="{{ asset_path "models/file_uploader.js" }}">
+<link rel="modulepreload" href="{{ asset_path "models/message_formatter.js" }}">
+<link rel="modulepreload" href="{{ asset_path "models/message_paginator.js" }}">
+<link rel="modulepreload" href="{{ asset_path "models/scroll_manager.js" }}">
+<link rel="modulepreload" href="{{ asset_path "models/typing_tracker.js" }}">
+<link rel="modulepreload" href="{{ asset_path "languages/bash.js" }}">
+<link rel="modulepreload" href="{{ asset_path "languages/css.js" }}">
+<link rel="modulepreload" href="{{ asset_path "languages/diff.js" }}">
+<link rel="modulepreload" href="{{ asset_path "languages/go.js" }}">
+<link rel="modulepreload" href="{{ asset_path "languages/java.js" }}">
+<link rel="modulepreload" href="{{ asset_path "languages/javascript.js" }}">
+<link rel="modulepreload" href="{{ asset_path "languages/json.js" }}">
+<link rel="modulepreload" href="{{ asset_path "languages/python.js" }}">
+<link rel="modulepreload" href="{{ asset_path "languages/ruby.js" }}">
+<link rel="modulepreload" href="{{ asset_path "languages/rust.js" }}">
+<link rel="modulepreload" href="{{ asset_path "languages/sql.js" }}">
+<link rel="modulepreload" href="{{ asset_path "languages/xml.js" }}">
+<script type="module">import "application"</script>
+
+    {{ yield :head }}
+  </head>
+
+  <body class="{{ yield :body_class }}" data-controller="local-time lightbox">
+    <a href="#main-content" class="skip-navigation btn">Skip to main content</a>
+
+    <nav id="nav">
+      {{ yield :nav }}
+    </nav>
+
+    {% if flash_on %}
+      <div class="flash" data-controller="element-removal" data-action="animationend->element-removal#remove">
+        {% if flash_alert %}
+        <div class="flash__inner shadow" style="--flash-background: var(--color-negative)">
+          <img aria-hidden="true" width="24" height="24" class="colorize--white" src="{{ asset_path "alert.svg" }}">
+        </div>
+        {% else %}
+        <div class="flash__inner shadow" style="">
+          <img aria-hidden="true" width="24" height="24" class="colorize--white" src="{{ asset_path "check.svg" }}">
+        </div>
+        {% endif %}
+        <span class="for-screen-reader" role="alert" aria-atomic="true">{{ flash_text }}</span>
+      </div>
+    {% endif %}
+
+    <main id="main-content">
+      {{ yield }}
+
+      <footer id="footer">
+        {{ yield :footer }}
+      </footer>
+    </main>
+
+    <aside id="sidebar" data-controller="toggle-class" data-toggle-class-toggle-class="open">
+      {{ yield :sidebar }}
+    </aside>
+
+    <dialog class="lightbox" aria-label="Image Viewer (Press escape to close)" data-lightbox-target="dialog" data-action="close->lightbox#reset">
+      <img src="" class="lightbox__image" data-lightbox-target="zoomedImage">
+
+      <form method="dialog" class="lightbox__btn">
+        <button class="btn">
+          <img aria-hidden="true" src="{{ asset_path "remove.svg" }}">
+          <span class="for-screen-reader">Close image viewer</span>
+        </button>
+      </form>
+
+      <a href="" class="lightbox__btn--download btn hide-in-ios-pwa" data-lightbox-target="download">
+        <img aria-hidden="true" src="{{ asset_path "download.svg" }}">
+        <span class="for-screen-reader">Download file</span>
+      </a>
+
+      <button class="lightbox__btn--share btn" data-controller="web-share" data-action="web-share#share" data-web-share-files-value="" data-lightbox-target="share">
+        <img aria-hidden="true" src="{{ asset_path "share.svg" }}">
+        <span class="for-screen-reader">Share file</span>
+      </button>
+    </dialog>
+
+    <a href="https://once.com" id="app-logo" target="_blank" aria-label="Once software from 37signals home page">
+      <img alt="Campfire logo" width="256" height="216" src="{{ asset_path "campfire-icon.png" }}">
+    </a>
+  </body>
+</html>

@@ -7,7 +7,9 @@
 # sidebar, search, posting a message with Rails' bracketed form keys (the Turbo Stream, then its three rows, and a
 # flat body's 422), the avatar route (a Rails signed_id token, image/webp, exact bytes twice, ffprobe, ETag/304,
 # cache headers and 404s), a room the user is not in, /up, the fingerprinted stylesheet, the login's rate limit,
-# and that logout kills the cookie. The expected message ids are computed from the database with sqlite3, the way
+# and that logout kills the cookie, and the removal of stored files as the code does it today (the regression bar for has_one_attached):
+# DELETE of the avatar, the account logo upload, replacement and DELETE (a member refused), and deleting a message with an attachment, each
+# checked for the attachment, blob and variant rows, the files left on disk and the touch. The expected message ids are computed from the database with sqlite3, the way
 # contracts.rb does, not written down. Needs curl and sqlite3, plus ruby, sha256sum or shasum for the asset digest;
 # the avatar check also needs ffprobe; the Action Cable check needs node. exit zero only when every check passed.
 # usage: sh test/e2e_campfire.sh [CRATE_DIR]      (default /tmp/campfire_axum_dsl-out)
@@ -977,6 +979,125 @@ has_text "the profile offers to delete the avatar" "avatar__delete-btn"
 req POST /users/me/profile -H "Sec-Fetch-Site: same-origin" -H "Cookie: $cookie" -F "_method=patch" -F "user[avatar]=@$work/moon.jpg;type=image/jpeg"
 [ "$(ids "SELECT COUNT(*) FROM active_storage_attachments WHERE record_type = 'User' AND record_id = 1 AND name = 'avatar'")" = "1" ] && ok "a second avatar replaces the first (one attachment)" || bad "a second avatar left $(ids "SELECT COUNT(*) FROM active_storage_attachments WHERE record_type = 'User' AND record_id = 1 AND name = 'avatar'") attachments"
 
+# --- removing and replacing stored files: the avatar, the account logo (pinned as the code does them today) -----------------
+# The ground truth for the Active Storage move to has_one_attached. DELETE /users/:token/avatar removes the SIGNED-IN person's
+# avatar whatever the token says (People#destroy_avatar, Rails' `Current.user.avatar.destroy`); DELETE /account/logo and a
+# replacing upload remove the account's. What goes today: the attachment row, the blob row, the variant records with their
+# image attachments and variant blobs, and the user's/account's updated_at moves. What stays: every FILE under the storage root
+# (the PurgeJob's file deletes are not reproduced), and a blob that an earlier avatar replacement detached (detach_avatar
+# removes the attachment, never the blob; Rails purges it in a later job that this service does not run).
+blob_path() { printf '%s/%s/%s/%s' "$storage" "$(printf %s "$1" | cut -c1-2)" "$(printf %s "$1" | cut -c3-4)" "$1"; }
+# fake_variant SOURCE_KEY VARIANT_KEY DIGEST CONTENT_TYPE FILE: the rows and file Rails leaves once a variant was processed
+# (a variant record, its blob, the `image` attachment between them), made by hand because the fixtures here are not images.
+fake_variant() {
+	sqlite3 "$db" "INSERT INTO active_storage_variant_records (blob_id, variation_digest) SELECT id, '$3' FROM active_storage_blobs WHERE key = '$1';
+INSERT INTO active_storage_blobs (key, filename, content_type, metadata, service_name, byte_size, checksum, created_at) VALUES ('$2', 'variant', '$4', '{}', 'local', 20, NULL, '2025-01-01 08:00:00.000');
+INSERT INTO active_storage_attachments (blob_id, record_type, record_id, name, created_at) SELECT (SELECT id FROM active_storage_blobs WHERE key = '$2'), 'ActiveStorage::VariantRecord', v.id, 'image', '2025-01-01 08:00:00.000' FROM active_storage_variant_records v WHERE v.blob_id = (SELECT id FROM active_storage_blobs WHERE key = '$1') AND v.variation_digest = '$3';"
+	mkdir -p "$(dirname "$(blob_path "$2")")" && cp "$5" "$(blob_path "$2")"
+}
+# variant_rows SOURCE_KEY: "records|attachments|blobs" of that blob's variants (all three go when it is purged).
+variant_rows() {
+	ids "SELECT (SELECT COUNT(*) FROM active_storage_variant_records WHERE blob_id = (SELECT id FROM active_storage_blobs WHERE key = '$1')) || '|' || (SELECT COUNT(*) FROM active_storage_attachments WHERE record_type = 'ActiveStorage::VariantRecord' AND record_id IN (SELECT id FROM active_storage_variant_records WHERE blob_id = (SELECT id FROM active_storage_blobs WHERE key = '$1'))) || '|' || (SELECT COUNT(*) FROM active_storage_blobs WHERE id IN (SELECT a.blob_id FROM active_storage_attachments a JOIN active_storage_variant_records v ON a.record_type = 'ActiveStorage::VariantRecord' AND a.record_id = v.id WHERE v.blob_id = (SELECT id FROM active_storage_blobs WHERE key = '$1')))"
+}
+
+# David's avatar: the second upload above is attached (the first upload's blob was detached by the replacement). Give it a
+# processed variant, so the route serves it, then delete it.
+david_key=$(ids "SELECT b.key FROM active_storage_attachments a JOIN active_storage_blobs b ON b.id = a.blob_id WHERE a.record_type = 'User' AND a.record_id = 1 AND a.name = 'avatar'")
+[ "${#david_key}" = "28" ] && [ "$david_key" != "$avatar_key" ] && ok "David's attached avatar is the replacement's blob, not the first upload's" || bad "David's avatar blob key is [$david_key] (the first upload's was [$avatar_key])"
+fake_variant "$david_key" e2edavidavatarvariant000001 6gwfjNKv9eUy9jNUtEZvQFLU0hQ= image/webp "$storage/ja/so/jasonavatarvariant"
+[ "$(variant_rows "$david_key")" = "1|1|1" ] && ok "David's avatar has a variant record, its image attachment and its blob" || bad "David's avatar variant rows are [$(variant_rows "$david_key")]"
+req GET "/users/$initials_avatar/avatar?v=with-avatar" -H "Cookie: $cookie"
+status_is "GET David's avatar once it has a variant" 200
+content_type_is "David's variant is image/webp" image/webp
+if cmp -s "$body" "$storage/ja/so/jasonavatarvariant"; then ok "the avatar route serves the variant's file"; else bad "the avatar route did not serve the variant's bytes"; fi
+avatar_touch_before=$(ids "SELECT updated_at FROM users WHERE id = 1")
+req POST "/users/$initials_avatar/avatar" -H "Sec-Fetch-Site: same-origin" -H "Cookie: $cookie" --data-urlencode "_method=delete"
+redirects "DELETE /users/:token/avatar goes back to the profile (Rails redirect_to user_profile_url)" /users/me/profile
+[ "$(ids "SELECT COUNT(*) FROM active_storage_attachments WHERE record_type = 'User' AND record_id = 1 AND name = 'avatar'")" = "0" ] && ok "the avatar attachment row is gone" || bad "the avatar attachment is still there"
+[ "$(ids "SELECT COUNT(*) FROM active_storage_blobs WHERE key = '$david_key'")" = "0" ] && ok "the avatar's blob row is gone (purged)" || bad "the avatar's blob row is still there"
+[ "$(variant_rows "$david_key")" = "0|0|0" ] && [ "$(ids "SELECT COUNT(*) FROM active_storage_blobs WHERE key = 'e2edavidavatarvariant000001'")" = "0" ] && ok "the avatar's variant record, image attachment and variant blob are gone" || bad "avatar variant rows left: [$(variant_rows "$david_key")]"
+[ -f "$(blob_path "$david_key")" ] && [ -f "$(blob_path e2edavidavatarvariant000001)" ] && ok "the avatar's files stay on disk (no file is purged)" || bad "a purged avatar's file was removed from disk"
+[ "$(ids "SELECT COUNT(*) FROM active_storage_blobs WHERE key = '$avatar_key'")" = "1" ] && ok "the blob the replacement detached stays (no purge job runs)" || bad "the replaced avatar's first blob row is gone"
+[ "$(ids "SELECT updated_at FROM users WHERE id = 1")" != "$avatar_touch_before" ] && ok "deleting the avatar touched the user" || bad "the user's updated_at did not move on avatar delete"
+req GET "/users/$initials_avatar/avatar?v=no-avatar" -H "Cookie: $cookie"
+status_is "GET David's avatar after the delete" 200
+content_type_is "the avatar is the initials SVG again" image/svg+xml
+has_text "the initials are David Heinemeier's DH" '      DH'
+req POST "/users/$initials_avatar/avatar" -H "Sec-Fetch-Site: same-origin" -H "Cookie: $cookie" --data-urlencode "_method=delete"
+redirects "deleting an avatar that is not there is a no-op redirect to the profile" /users/me/profile
+
+# Jason's seeded avatar has a real variant from the seed (blobs 1 and 2, attachments 1 and 2, variant record 1); the token in
+# the path is David's here, to show the signed-in person's avatar goes, not the path's.
+jason_touch_before=$(ids "SELECT updated_at FROM users WHERE id = 2")
+[ "$(variant_rows jasonavatarsource)" = "1|1|1" ] && ok "Jason's seeded avatar has its variant rows" || bad "Jason's variant rows are [$(variant_rows jasonavatarsource)]"
+req POST "/users/$initials_avatar/avatar" -H "Sec-Fetch-Site: same-origin" -H "Cookie: $jcookie" --data-urlencode "_method=delete"
+redirects "Jason's avatar delete goes back to the profile" /users/me/profile
+[ "$(ids "SELECT (SELECT COUNT(*) FROM active_storage_attachments WHERE record_type = 'User' AND name = 'avatar') + (SELECT COUNT(*) FROM active_storage_blobs WHERE key IN ('jasonavatarsource', 'jasonavatarvariant')) + (SELECT COUNT(*) FROM active_storage_variant_records WHERE id = 1) + (SELECT COUNT(*) FROM active_storage_attachments WHERE id IN (1, 2))")" = "0" ] && ok "Jason's avatar, its variant record and both blobs are gone (no other user has an avatar)" || bad "rows of Jason's avatar remain"
+[ -f "$storage/ja/so/jasonavatarvariant" ] && ok "Jason's variant file stays on disk" || bad "Jason's variant file was removed"
+[ "$(ids "SELECT updated_at FROM users WHERE id = 2")" != "$jason_touch_before" ] && ok "deleting Jason's avatar touched him" || bad "Jason's updated_at did not move on avatar delete"
+req GET "/users/$avatar/avatar?v=no-avatar" -H "Cookie: $cookie"
+content_type_is "Jason's avatar is the initials SVG after the delete" image/svg+xml
+has_text "the initials are Jason Fried's JF" '      JF'
+
+# The account logo. A member's upload is refused; the administrator's is stored; the logo route serves a logo's processed
+# :large PNG variant and the stock icon when the logo has none (this e2e's logo bytes are not an image, so the variant is
+# made by hand: fake_variant). A replacing upload purges the old logo, its variants and their blobs; DELETE does the same.
+printf 'e2e logo one' >"$work/logo1.png"
+printf 'e2e logo number two' >"$work/logo2.png"
+printf 'e2e logo variant, not the stock icon' >"$work/logo.variant.png"
+logo_digest="ksXvpLsa7BuCVyHOwmQOKedbIbM="
+logos() { ids "SELECT COUNT(*) FROM active_storage_attachments WHERE record_type = 'Account' AND name = 'logo'"; }
+[ "$(logos)" = "0" ] && ok "the account starts without a logo" || bad "the account already has $(logos) logo attachments"
+req POST /account.1 -H "Sec-Fetch-Site: same-origin" -H "Cookie: $jcookie" -F "_method=patch" -F "account[logo]=@$work/logo1.png;type=image/png"
+status_is "a member cannot upload the account logo (ensure_can_administer)" 403
+[ "$(logos)" = "0" ] && ok "the refused logo upload attached nothing" || bad "a member's logo upload attached a logo"
+logo_touch_before=$(ids "SELECT updated_at FROM accounts")
+req POST /account.1 -H "Sec-Fetch-Site: same-origin" -H "Cookie: $cookie" -F "_method=patch" -F "account[logo]=@$work/logo1.png;type=image/png"
+status_is "PATCH /account.1 with a logo (multipart)" 302
+redirects "the logo upload goes back to the account settings" /account/edit
+[ "$(logos)" = "1" ] && ok "one logo attachment" || bad "logo attachments: $(logos)"
+logo_key1=$(ids "SELECT b.key FROM active_storage_attachments a JOIN active_storage_blobs b ON b.id = a.blob_id WHERE a.record_type = 'Account' AND a.name = 'logo'")
+[ "$(ids "SELECT filename || '|' || content_type || '|' || byte_size FROM active_storage_blobs WHERE key = '$logo_key1'")" = "logo1.png|image/png|12" ] && ok "the logo blob records the file" || bad "the logo blob row is [$(ids "SELECT filename || '|' || content_type || '|' || byte_size FROM active_storage_blobs WHERE key = '$logo_key1'")]"
+cmp -s "$work/logo1.png" "$(blob_path "$logo_key1")" && ok "the logo file is on disk at <root>/xx/yy/<key>" || bad "no logo file with the uploaded bytes at the Disk path of [$logo_key1]"
+[ "$(ids "SELECT updated_at FROM accounts")" != "$logo_touch_before" ] && ok "attaching the logo touched the account (the logo's ?v=)" || bad "the account's updated_at did not move on the logo upload"
+fake_variant "$logo_key1" e2elogovariantone0000000001 "$logo_digest" image/png "$work/logo.variant.png"
+req GET "/account/logo?v=logo-one"
+status_is "GET /account/logo with a processed logo" 200
+content_type_is "the logo is image/png" image/png
+if cmp -s "$body" "$work/logo.variant.png"; then ok "the logo route serves the logo's variant file"; else bad "the logo route did not serve the variant's bytes"; fi
+if cmp -s "$body" "$root/public/logos/app-icon.png"; then bad "the logo route still serves the stock icon"; else ok "the logo route does not serve the stock icon"; fi
+
+req POST /account.1 -H "Sec-Fetch-Site: same-origin" -H "Cookie: $cookie" -F "_method=patch" -F "account[logo]=@$work/logo2.png;type=image/png"
+redirects "a second logo upload goes back to the account settings" /account/edit
+[ "$(logos)" = "1" ] && ok "a second logo replaces the first (one attachment)" || bad "a second logo left $(logos) attachments"
+logo_key2=$(ids "SELECT b.key FROM active_storage_attachments a JOIN active_storage_blobs b ON b.id = a.blob_id WHERE a.record_type = 'Account' AND a.name = 'logo'")
+[ -n "$logo_key2" ] && [ "$logo_key2" != "$logo_key1" ] && ok "the attached logo is the new blob" || bad "the attached logo key is [$logo_key2] (the first was [$logo_key1])"
+[ "$(ids "SELECT filename || '|' || byte_size FROM active_storage_blobs WHERE key = '$logo_key2'")" = "logo2.png|19" ] && ok "the new logo blob records the file" || bad "the new logo blob row is [$(ids "SELECT filename || '|' || byte_size FROM active_storage_blobs WHERE key = '$logo_key2'")]"
+[ "$(ids "SELECT COUNT(*) FROM active_storage_blobs WHERE key = '$logo_key1'")" = "0" ] && ok "the replaced logo's blob row is gone" || bad "the replaced logo's blob row is still there"
+[ "$(variant_rows "$logo_key1")" = "0|0|0" ] && [ "$(ids "SELECT COUNT(*) FROM active_storage_blobs WHERE key = 'e2elogovariantone0000000001'")" = "0" ] && ok "the replaced logo's variant record, image attachment and variant blob are gone" || bad "replaced logo variant rows left: [$(variant_rows "$logo_key1")]"
+[ -f "$(blob_path "$logo_key1")" ] && [ -f "$(blob_path e2elogovariantone0000000001)" ] && ok "the replaced logo's files stay on disk" || bad "a replaced logo's file was removed from disk"
+req GET "/account/logo?v=logo-two"
+status_is "GET /account/logo with a logo that has no variant yet" 200
+if cmp -s "$body" "$root/public/logos/app-icon.png"; then ok "the new logo (not processed) answers the stock icon"; else bad "the unprocessed logo did not answer the stock icon"; fi
+
+fake_variant "$logo_key2" e2elogovarianttwo0000000001 "$logo_digest" image/png "$work/logo.variant.png"
+logo_touch_before=$(ids "SELECT updated_at FROM accounts")
+req POST /account/logo -H "Sec-Fetch-Site: same-origin" -H "Cookie: $jcookie" --data-urlencode "_method=delete"
+status_is "a member cannot delete the account logo (ensure_can_administer)" 403
+[ "$(logos)" = "1" ] && [ "$(variant_rows "$logo_key2")" = "1|1|1" ] && ok "the refused logo delete kept the logo and its variant" || bad "a member's logo delete changed rows: logos $(logos), variants [$(variant_rows "$logo_key2")]"
+req POST /account/logo -H "Sec-Fetch-Site: same-origin" -H "Cookie: $cookie" --data-urlencode "_method=delete"
+redirects "DELETE /account/logo goes back to the account settings" /account/edit
+[ "$(logos)" = "0" ] && ok "the logo attachment row is gone" || bad "the logo attachment is still there"
+[ "$(ids "SELECT COUNT(*) FROM active_storage_blobs WHERE key = '$logo_key2'")" = "0" ] && ok "the logo's blob row is gone (purged)" || bad "the logo's blob row is still there"
+[ "$(variant_rows "$logo_key2")" = "0|0|0" ] && [ "$(ids "SELECT COUNT(*) FROM active_storage_blobs WHERE key = 'e2elogovarianttwo0000000001'")" = "0" ] && ok "the logo's variant record, image attachment and variant blob are gone" || bad "logo variant rows left: [$(variant_rows "$logo_key2")]"
+[ -f "$(blob_path "$logo_key2")" ] && [ -f "$(blob_path e2elogovarianttwo0000000001)" ] && ok "the deleted logo's files stay on disk" || bad "a deleted logo's file was removed from disk"
+[ "$(ids "SELECT updated_at FROM accounts")" != "$logo_touch_before" ] && ok "deleting the logo touched the account (the logo's ?v=)" || bad "the account's updated_at did not move on logo delete"
+req GET "/account/logo?v=logo-gone"
+status_is "GET /account/logo after the delete" 200
+if cmp -s "$body" "$root/public/logos/app-icon.png"; then ok "after the delete the logo route serves the stock icon again"; else bad "the logo route did not fall back to the stock icon"; fi
+req POST /account/logo -H "Sec-Fetch-Site: same-origin" -H "Cookie: $cookie" --data-urlencode "_method=delete"
+redirects "deleting a logo that is not there is a no-op redirect to the account settings" /account/edit
+
 # --- the composer's file post (MessagesController#create with `message[attachment]`, no body) ---------------------------
 printf 'attachment e2e bytes' >"$work/photo.jpg"
 req POST /rooms/1/messages -H "Sec-Fetch-Site: same-origin" -H "Cookie: $cookie" -H "Accept: text/vnd.turbo-stream.html" -F "message[attachment]=@$work/photo.jpg;type=image/jpeg" -F "message[client_message_id]=e2e-att"
@@ -993,6 +1114,23 @@ cmp -s "$work/photo.jpg" "$storage/$(printf %s "$att_key" | cut -c1-2)/$(printf 
 [ "$(ids "SELECT body FROM message_search_index WHERE rowid = $att_message")" = "photo.jpg" ] && ok "the search index holds the filename (Message#plain_text_body)" || bad "the search index row is [$(ids "SELECT body FROM message_search_index WHERE rowid = $att_message")]"
 req GET /rooms/1 -H "Cookie: $cookie"
 has_text "the room page draws the attachment message" "message__attachment"
+
+# --- deleting a message that has an attachment (Message#destroy purges the attachment's blobs with their variants) ---------
+# The composer's file post above made message $att_message with photo.jpg. Give the blob a processed variant by hand, then
+# delete the message as its creator: the message, its attachment row, the blob row, the variant record, its image attachment
+# and its blob go; the two files stay on disk (no file is purged).
+att_variant_key=e2emessagevariant0000000001
+fake_variant "$att_key" "$att_variant_key" e2emessagevariantdigest= image/jpeg "$work/photo.jpg"
+[ "$(variant_rows "$att_key")" = "1|1|1" ] && ok "the message attachment has a variant record, its image attachment and its blob" || bad "the message attachment's variant rows are [$(variant_rows "$att_key")]"
+req POST "/rooms/1/messages/$att_message" -H "Sec-Fetch-Site: same-origin" -H "Cookie: $cookie" --data-urlencode "_method=delete"
+status_is "POST _method=delete removes the message that has an attachment" 200
+has_text "the stream removes the attachment message" "<turbo-stream action=\"remove\" target=\"message_e2e-att\">"
+[ "$(ids "SELECT COUNT(*) FROM messages WHERE id = $att_message")" = "0" ] && ok "the attachment message row is gone" || bad "the attachment message row is still there"
+[ "$(ids "SELECT COUNT(*) FROM active_storage_attachments WHERE record_type = 'Message' AND record_id = $att_message")" = "0" ] && ok "the message's attachment row is gone" || bad "the message's attachment row is still there"
+[ "$(ids "SELECT COUNT(*) FROM active_storage_blobs WHERE key = '$att_key'")" = "0" ] && ok "the attachment's blob row is gone (purged)" || bad "the attachment's blob row is still there"
+[ "$(variant_rows "$att_key")" = "0|0|0" ] && [ "$(ids "SELECT COUNT(*) FROM active_storage_blobs WHERE key = '$att_variant_key'")" = "0" ] && ok "the attachment's variant record, image attachment and variant blob are gone" || bad "attachment variant rows left: [$(variant_rows "$att_key")]"
+[ -f "$(blob_path "$att_key")" ] && [ -f "$(blob_path "$att_variant_key")" ] && ok "the attachment's files stay on disk" || bad "a purged attachment's file was removed from disk"
+[ "$(ids "SELECT COUNT(*) FROM message_search_index WHERE rowid = $att_message")" = "0" ] && ok "the attachment message's FTS row is gone" || bad "the attachment message's FTS row is still there"
 
 # --- the join form (UsersController#create; multipart, an empty avatar input) --------------------------------------------
 req POST /join/wrong-code -H "Sec-Fetch-Site: same-origin" -F "user[name]=Nora New" -F "user[email_address]=nora@example.com" -F "user[password]=secret123456" -F "user[avatar]="
@@ -1090,7 +1228,7 @@ status_is "PUT /session/transfers/:id (a tampered link)" 400
 # --- logout ------------------------------------------------------------------------------------------------
 
 req DELETE /session -H "Cookie: $cookie"
-redirects "the logout goes to /session/new" "/session/new"
+redirects "the logout goes to / (Rails redirect_to root_url)" "/"
 if grep -i '^set-cookie: session_token=;' "$hdr" >/dev/null; then ok "the logout clears the cookie"; else bad "the logout did not clear the cookie"; fi
 req GET /rooms/1 -H "Cookie: $cookie"
 redirects "the old cookie no longer works (its session row is gone)" /session/new
@@ -1113,6 +1251,8 @@ status_is "GET /session/new after the burst" 200
 
 if [ "$failed" -ne 0 ]; then
 	echo "failed:$failures"
+	# Again on stderr: a hook prints stderr after stdout, so the list is the last thing a truncated log keeps.
+	echo "failed:$failures" >&2
 	fail "$failed of $((passed + failed)) checks failed"
 fi
-echo "OK: $passed checks passed: login (302, cookie), the redirect without one, room_show ids and ETag, last_room, messages_page ids, the sidebar, search, posting a message, the avatar route, rooms david is not in, /up, the fingerprinted stylesheet, the Action Cable endpoint, the login rate limit, logout"
+echo "OK: $passed checks passed: login (302, cookie), the redirect without one, room_show ids and ETag, last_room, messages_page ids, the sidebar, search, posting a message, the avatar route, rooms david is not in, /up, the fingerprinted stylesheet, the Action Cable endpoint, the login rate limit, logout, and the avatar, account logo and message attachment removals and replacements (rows, variants, files, touches)"

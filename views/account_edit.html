@@ -39,7 +39,7 @@
         </label>
       </form>
       {% if has_logo %}
-        <form class="button_to" method="post" action="/account/logo">
+        <form class="button_to" method="post" action="/account/logo?v={{ logo_version }}">
           <input type="hidden" name="_method" value="delete" />
           <button class="btn btn--negative txt-small avatar__delete-btn" type="submit">
             <img aria-hidden="true" src="{{ asset_path "minus.svg" }}" width="20" height="20" />
@@ -98,6 +98,9 @@
         {% for user in members %}
           {{ partial :account_user, id: user.id, name: user.name, title: user.title, active: user.active, banned: user.banned, administrator: user.administrator, avatar_version: user.avatar_version, is_current: user.is_current, can_administer: can_administer }}
         {% endfor %}
+        {% if has_next_page %}
+          {{ partial :next_page_container, page: 2 }}
+        {% endif %}
       </turbo-frame>
     </menu>
   </div>

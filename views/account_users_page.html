@@ -1,0 +1,6 @@
+<turbo-stream action="replace" target="next_page_container"><template>{% for user in users %}{{ partial :account_user, id: user.id, name: user.name, title: user.title, active: user.active, banned: user.banned, administrator: user.administrator, avatar_version: user.avatar_version, is_current: user.is_current, can_administer: can_administer }}{% endfor %}</template></turbo-stream>
+
+{% if has_next_page %}  <turbo-stream action="append" target="account_users"><template><turbo-frame loading="lazy" class="flex center" id="next_page_container" src="/account/users.turbo_stream?page={{ next_page }}">
+  <div class="spinner center"></div>
+</turbo-frame></template></turbo-stream>
+{% endif %}

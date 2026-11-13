@@ -1,4 +1,4 @@
-fragment do
+model do
   # --- sidebar (users/sidebars/show.html.erb, users/sidebars/rooms/*) ---------------------------------------------
 
   # users/sidebars/rooms/_direct.html.erb's `members` and users/sidebars/rooms/_direct_placeholder.html.erb's `user`:
@@ -23,12 +23,23 @@ fragment do
     field :members, list(:SidebarUser), from: :sidebar_direct_members
   end
 
-  # One row per shared room (users/sidebars/rooms/_shared).
+  # One row per shared room (users/sidebars/rooms/_shared): `class_names` marks an unread room and `dom_id` is
+  # dom_id(room, :list), both worked out from the row (the query is in models/room.axum.rb).
   record :SidebarRoom do
     field :id, :i64
     field :name, :string
-    field :class_names, :string
-    field :dom_id, :string
+    field :kind, :string
+    field :unread, :bool
+
+    def class_names
+      if unread
+        "align-center gap room btn txt-nowrap unread"
+      else
+        "align-center gap room btn txt-nowrap"
+      end
+    end
+
+    def dom_id = "list_rooms_#{kind}_#{id}"
   end
 
   # layouts/application and users/sidebars/show: the administrator flag, the account's
@@ -36,6 +47,7 @@ fragment do
   record :SidebarFlags do
     field :admin, :i64
     field :restrict, :i64
+    field :can_create, :bool
     field :avatar_version, :string
   end
 
@@ -64,14 +76,7 @@ fragment do
     LIMIT 4
   SQL
 
-  # `cache membership` around each direct entry (db/migrate/002_sidebar_direct_cache.sql): the first render under a
-  # membership's id and updated_at records its unread state, and later renders under the same key show that one.
-  execute :cache_sidebar_direct, args: { user_id: :i64 }, sql: <<~SQL
-    INSERT OR IGNORE INTO axum_dsl_sidebar_direct_cache (membership_id, membership_updated_at, unread)
-    SELECT m.id, m.updated_at, m.unread_at IS NOT NULL
-    FROM memberships m JOIN rooms r ON r.id = m.room_id
-    WHERE m.user_id = :user_id AND m.involvement <> 'invisible' AND r.type = 'Rooms::Direct'
-  SQL
+  # `cache membership` around each direct entry: the cache insert, cache_sidebar_direct, is in models/sidebar_direct_cache.axum.rb.
 
   # Current.user.memberships.visible, the direct ones: sorted by room.updated_at (newest first). display reproduces
   # `members.map { |m| m.name.split(' ')[0, 3].map { |s| s[0].capitalize }.join }.to_sentence(two_words_connector: '+')`,
@@ -150,18 +155,6 @@ fragment do
     ORDER BY d.updated_at DESC, d.membership_id DESC
   SQL
 
-  # The visible memberships that are not direct rooms, in with_ordered_room order.
-  query :sidebar_shared_rooms, args: { user_id: :i64 }, returns: list(:SidebarRoom), sql: <<~SQL
-    SELECT r.id AS id, COALESCE(r.name, '') AS name,
-           CASE WHEN m.unread_at IS NOT NULL THEN 'align-center gap room btn txt-nowrap unread'
-                ELSE 'align-center gap room btn txt-nowrap' END AS class_names,
-           'list_' || CASE r.type WHEN 'Rooms::Open' THEN 'rooms_open' WHEN 'Rooms::Closed' THEN 'rooms_closed'
-                                 ELSE 'rooms_direct' END || '_' || r.id AS dom_id
-    FROM rooms r JOIN memberships m ON m.room_id = r.id
-    WHERE m.user_id = :user_id AND m.involvement <> 'invisible' AND r.type <> 'Rooms::Direct'
-    ORDER BY LOWER(r.name), m.id
-  SQL
-
   # find_direct_placeholder_users: active users not already in a direct room with the current user, 20 less the
   # distinct ids in those rooms and the duplicate `including(Current.user.id)` appends.
   query :sidebar_direct_placeholders, args: { user_id: :i64 }, returns: list(:SidebarUser), sql: <<~SQL
@@ -190,6 +183,8 @@ fragment do
     SELECT CASE WHEN u.role = 1 THEN 1 ELSE 0 END AS admin,
            CASE WHEN COALESCE(json_extract(a.settings, '$.restrict_room_creation_to_administrators'), 0) IN (0, 'false')
                 THEN 0 ELSE 1 END AS restrict,
+           CASE WHEN u.role = 1 OR COALESCE(json_extract(a.settings, '$.restrict_room_creation_to_administrators'), 0) IN (0, 'false')
+                THEN 1 ELSE 0 END AS can_create,
            strftime('%Y%m%d%H%M%S', u.updated_at) AS avatar_version
     FROM users u LEFT JOIN accounts a ON 1 = 1
     WHERE u.id = :user_id
